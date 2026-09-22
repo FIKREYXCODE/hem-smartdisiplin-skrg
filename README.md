@@ -10,6 +10,7 @@ Sistem pengisian, semakan dan analisis rekod salah laku murid untuk Sekolah Keba
 - Aliran Guru Disiplin → PK HEM → Guru Besar.
 - Jejak audit kekal untuk cipta, kemas kini, semakan, penghapusan lembut dan pemulihan.
 - Carian, penapis, analisis kategori/kelas/status, eksport CSV dan cetakan.
+- Boleh dipasang sebagai PWA pada telefon atau komputer dengan ikon rasmi SmartDisiplin.
 - Data peribadi tidak disimpan dalam repositori. Daftar dimuatkan terus ke D1 melalui proses import pentadbir.
 
 ## Perlindungan data
