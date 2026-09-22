@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import Image from "next/image";
 import { AlertTriangle, ArchiveRestore, BarChart3, CheckCircle2, ChevronRight, ClipboardList, Download, FilePlus2, History, LayoutDashboard, Pencil, Printer, Search, ShieldCheck, Trash2, UserRound, UsersRound, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -37,8 +38,9 @@ export default function Home() {
       if (!rosterResponse.ok || !casesResponse.ok) throw new Error(roster.error || cases.error || "Data tidak dapat dimuatkan."); setTeachers(roster.teachers); setClasses(roster.classes); setRecords(cases.records);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Data tidak dapat dimuatkan."); }
   }
+  // Initial data hydration is intentionally performed once when the client opens.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, []);
-  useEffect(() => { if (user?.role && user.role !== "Pelapor") setRole(user.role); }, [user]);
   const visibleClasses = classes.filter(c => c.session === form.session); const chosenClass = classes.find(c => c.id === form.classId);
   const filtered = useMemo(() => records.filter(r => {
     const matchesSearch = !query.trim() || [r.id, r.student, r.reporter, r.className, r.category].some(s => s.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
@@ -64,7 +66,7 @@ export default function Home() {
   const canReview = selected && !selected.deletedAt && ((role === "Guru Disiplin" && selected.status === "disiplin") || (role === "PK HEM" && selected.status === "pk") || (role === "Guru Besar" && selected.status === "besar"));
 
   return <div className="app-shell"><aside className="sidebar"><Brand /><div className="nav-caption">RUANG KERJA</div><nav className="nav-list" aria-label="Navigasi utama"><Nav active={view === "dashboard"} onClick={() => setView("dashboard")} icon={<LayoutDashboard size={19} />} label="Ringkasan" /><Nav active={view === "new"} onClick={() => setView("new")} icon={<FilePlus2 size={19} />} label="Laporan baharu" /><Nav active={view === "records"} onClick={() => setView("records")} icon={<ClipboardList size={19} />} label="Semua rekod" count={active.length} /><Nav active={view === "analysis"} onClick={() => setView("analysis")} icon={<BarChart3 size={19} />} label="Analisis" /><Nav active={view === "classes"} onClick={() => setView("classes")} icon={<UsersRound size={19} />} label="Guru kelas" /></nav><div className="sidebar-bottom"><strong>Dibangunkan oleh</strong><p>Cikgu Mohammad Fikrey bin Abdul Gapar</p><small>SK Ranggu, Tawau</small></div></aside>
-  <div className="main-wrap"><header className="topbar"><div className="topbar-title">SEKOLAH KEBANGSAAN RANGGU <span>Peti Surat 842, 91008 Tawau, Sabah</span></div><div className="identity"><div><span>Pengguna semasa</span><Picker value={userId} onChange={setUserId} placeholder="Pilih nama guru" options={teachers.map(t => ({ value: t.id, label: t.name }))} /></div><div><span>Peranan tugas</span><Picker value={role} onChange={v => setRole(v as Role)} placeholder="Pilih peranan" options={roles.map(v => ({ value: v, label: v }))} /></div></div></header>
+  <div className="main-wrap"><header className="topbar"><div className="topbar-title">SEKOLAH KEBANGSAAN RANGGU <span>Peti Surat 842, 91008 Tawau, Sabah</span></div><div className="identity"><div><span>Pengguna semasa</span><Picker value={userId} onChange={v => { setUserId(v); const selectedUser = teachers.find(t => t.id === v); setRole(selectedUser?.role && selectedUser.role !== "Pelapor" ? selectedUser.role : "Pelapor"); }} placeholder="Pilih nama guru" options={teachers.map(t => ({ value: t.id, label: t.name }))} /></div><div><span>Peranan tugas</span><Picker value={role} onChange={v => setRole(v as Role)} placeholder="Pilih peranan" options={roles.map(v => ({ value: v, label: v }))} /></div></div></header>
   <main className="content"><div className="mobile-brand"><Brand /></div><PageHead view={view} onNew={() => setView("new")} />{message && <div className="feedback" role="status">{message}<button aria-label="Tutup mesej" onClick={() => setMessage("")}><X size={16} /></button></div>}
   {!user && <div className="identity-alert"><ShieldCheck size={20} /><div><strong>Pilih nama guru sebelum menggunakan sistem.</strong><span>Nama ini akan direkodkan dalam jejak audit bagi setiap simpanan dan perubahan.</span></div></div>}
   {view === "dashboard" && <Dashboard records={active} pending={pending} onOpen={openRecord} onRecords={() => setView("records")} />}
@@ -77,7 +79,7 @@ export default function Home() {
   </div>;
 }
 
-function Brand() { return <div className="brand"><img src="/sk-ranggu-cutout.png" alt="Logo SK Ranggu" /><div><strong>HEM <span>SmartDisiplin</span></strong><small>SK RANGGU · TAWAU</small></div></div>; }
+function Brand() { return <div className="brand"><Image src="/sk-ranggu-cutout.png" width={48} height={58} alt="Logo SK Ranggu" priority /><div><strong>HEM <span>SmartDisiplin</span></strong><small>SK RANGGU · TAWAU</small></div></div>; }
 function Nav({ active, onClick, icon, label, count }: { active: boolean; onClick: () => void; icon: ReactNode; label: string; count?: number }) { return <button className={active ? "active" : ""} onClick={onClick}>{icon}{label}{count !== undefined && <span className="nav-count">{count}</span>}</button>; }
 function PageHead({ view, onNew }: { view: View; onNew: () => void }) { const map: Record<View, [string, string]> = { dashboard: ["Ringkasan disiplin", "Pantau kes dan tindakan yang memerlukan perhatian."], new: ["Laporan salah laku murid", "Isi butiran kejadian dengan tepat dan objektif."], records: ["Rekod kes", "Cari, semak, kemas kini dan jejak setiap perubahan."], analysis: ["Analisis disiplin", "Lihat corak kes mengikut kategori, kelas dan status."], classes: ["Guru kelas", "Senarai guru kelas dan jumlah kes setiap kelas."] }; return <div className="page-heading"><div><div className="eyebrow">HEM / {view.toUpperCase()}</div><h1>{map[view][0]}</h1><p>{map[view][1]}</p></div>{view !== "new" && <Button className="primary-action" onClick={onNew}><FilePlus2 size={17} /> Laporan baharu</Button>}</div>; }
 function CardHead({ number, title, subtitle }: { number: string; title: string; subtitle: string }) { return <div className="card-head"><span className="number-badge">{number}</span><div><h2>{title}</h2><p>{subtitle}</p></div></div>; }
