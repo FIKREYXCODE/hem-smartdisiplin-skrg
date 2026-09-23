@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import Image from "next/image";
 import { AlertTriangle, ArchiveRestore, BarChart3, CheckCircle2, ChevronRight, ClipboardList, Download, FilePlus2, History, LayoutDashboard, Pencil, Printer, Search, ShieldCheck, Trash2, UserRound, UsersRound, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -16,6 +15,12 @@ const statuses: CaseStatus[] = ["disiplin", "pk", "besar", "selesai"];
 const initialForm = { session: "", classId: "", studentId: "", date: "", time: "", category: "", notes: "", initialAction: "" };
 const emptyFilters = { date: "", classId: "", category: "", status: "", deleted: "active" };
 type View = "dashboard" | "new" | "records" | "analysis" | "classes";
+
+const PUBLIC_BACKEND = "https://hem-smartdisiplin-ranggu.afiqzkablemo.chatgpt.site";
+const GITHUB_PATH = "/hem-smartdisiplin-skrg";
+function isGithubPages() { return typeof window !== "undefined" && window.location.hostname === "fikreyxcode.github.io"; }
+function apiUrl(path: string) { return `${isGithubPages() ? PUBLIC_BACKEND : ""}${path}`; }
+function assetUrl(path: string) { return `${isGithubPages() ? GITHUB_PATH : ""}${path}`; }
 
 function Picker({ value, onChange, placeholder, options, disabled = false }: { value: string; onChange: (v: string) => void; placeholder: string; options: { value: string; label: string }[]; disabled?: boolean }) {
   return <Select value={value || undefined} onValueChange={onChange} disabled={disabled}><SelectTrigger className="field-select"><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent>{options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select>;
@@ -33,7 +38,7 @@ export default function Home() {
   const user = teachers.find(t => t.id === userId);
   async function load() {
     try {
-      const [rosterResponse, casesResponse] = await Promise.all([fetch("/api/roster", { cache: "no-store" }), fetch("/api/cases?deleted=1", { cache: "no-store" })]);
+      const [rosterResponse, casesResponse] = await Promise.all([fetch(apiUrl("/api/roster"), { cache: "no-store" }), fetch(apiUrl("/api/cases?deleted=1"), { cache: "no-store" })]);
       const roster = await asJson<{ teachers: Teacher[]; classes: SchoolClass[]; error?: string }>(rosterResponse); const cases = await asJson<{ records: CaseRecord[]; error?: string }>(casesResponse);
       if (!rosterResponse.ok || !casesResponse.ok) throw new Error(roster.error || cases.error || "Data tidak dapat dimuatkan."); setTeachers(roster.teachers); setClasses(roster.classes); setRecords(cases.records);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Data tidak dapat dimuatkan."); }
@@ -53,12 +58,12 @@ export default function Home() {
 
   async function submit(e: FormEvent) {
     e.preventDefault(); if (!user) return setMessage("Pilih nama pengguna semasa dahulu."); setBusy(true); setMessage("");
-    try { const response = await fetch("/api/cases", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, reporterId: user.id, reporter: user.name, role }) }); const data = await asJson<{ record: CaseRecord; error?: string }>(response); if (!response.ok) throw new Error(data.error); setForm(initialForm); await load(); setSelected(data.record); setView("records"); setMessage(`Laporan ${data.record.id} berjaya disimpan.`); }
+    try { const response = await fetch(apiUrl("/api/cases"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, reporterId: user.id, reporter: user.name, role }) }); const data = await asJson<{ record: CaseRecord; error?: string }>(response); if (!response.ok) throw new Error(data.error); setForm(initialForm); await load(); setSelected(data.record); setView("records"); setMessage(`Laporan ${data.record.id} berjaya disimpan.`); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Laporan tidak dapat disimpan."); } finally { setBusy(false); }
   }
   async function changeCase(mode: "review" | "edit" | "delete" | "restore") {
     if (!selected || !user) return setMessage("Pilih nama pengguna semasa dahulu."); setBusy(true); setMessage("");
-    try { const body = mode === "review" ? { mode, actorId: user.id, actor: user.name, role, action: reviewAction } : mode === "edit" ? { mode, actorId: user.id, actor: user.name, role, ...edit } : mode === "delete" ? { mode, actorId: user.id, actor: user.name, role, reason: deleteReason } : { mode, actorId: user.id, actor: user.name, role }; const response = await fetch(`/api/cases/${selected.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const data = await asJson<{ record: CaseRecord; error?: string }>(response); if (!response.ok) throw new Error(data.error); setSelected(data.record); setReviewAction(""); setDeleteReason(""); setEditMode(false); await load(); setMessage(mode === "delete" ? "Rekod dipadam secara lembut dan jejak audit dikekalkan." : mode === "restore" ? "Rekod berjaya dipulihkan." : "Perubahan berjaya disimpan dan direkodkan."); }
+    try { const body = mode === "review" ? { mode, actorId: user.id, actor: user.name, role, action: reviewAction } : mode === "edit" ? { mode, actorId: user.id, actor: user.name, role, ...edit } : mode === "delete" ? { mode, actorId: user.id, actor: user.name, role, reason: deleteReason } : { mode, actorId: user.id, actor: user.name, role }; const response = await fetch(apiUrl(`/api/cases/${selected.id}`), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const data = await asJson<{ record: CaseRecord; error?: string }>(response); if (!response.ok) throw new Error(data.error); setSelected(data.record); setReviewAction(""); setDeleteReason(""); setEditMode(false); await load(); setMessage(mode === "delete" ? "Rekod dipadam secara lembut dan jejak audit dikekalkan." : mode === "restore" ? "Rekod berjaya dipulihkan." : "Perubahan berjaya disimpan dan direkodkan."); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Perubahan tidak dapat disimpan."); } finally { setBusy(false); }
   }
   function openRecord(record: CaseRecord) { setSelected(record); setEdit({ category: record.category, notes: record.notes, initialAction: record.initialAction }); setEditMode(false); setDeleteReason(""); setReviewAction(""); }
@@ -79,7 +84,7 @@ export default function Home() {
   </div>;
 }
 
-function Brand() { return <div className="brand"><Image src="/sk-ranggu-cutout.png" width={48} height={58} alt="Logo SK Ranggu" priority /><div><strong>HEM <span>SmartDisiplin</span></strong><small>SK RANGGU · TAWAU</small></div></div>; }
+function Brand() { return <div className="brand"><img src={assetUrl("/sk-ranggu-cutout.png")} width={48} height={58} alt="Logo SK Ranggu" /><div><strong>HEM <span>SmartDisiplin</span></strong><small>SK RANGGU · TAWAU</small></div></div>; }
 function Nav({ active, onClick, icon, label, count }: { active: boolean; onClick: () => void; icon: ReactNode; label: string; count?: number }) { return <button className={active ? "active" : ""} onClick={onClick}>{icon}{label}{count !== undefined && <span className="nav-count">{count}</span>}</button>; }
 function PageHead({ view, onNew }: { view: View; onNew: () => void }) { const map: Record<View, [string, string]> = { dashboard: ["Ringkasan disiplin", "Pantau kes dan tindakan yang memerlukan perhatian."], new: ["Laporan salah laku murid", "Isi butiran kejadian dengan tepat dan objektif."], records: ["Rekod kes", "Cari, semak, kemas kini dan jejak setiap perubahan."], analysis: ["Analisis disiplin", "Lihat corak kes mengikut kategori, kelas dan status."], classes: ["Guru kelas", "Senarai guru kelas dan jumlah kes setiap kelas."] }; return <div className="page-heading"><div><div className="eyebrow">HEM / {view.toUpperCase()}</div><h1>{map[view][0]}</h1><p>{map[view][1]}</p></div>{view !== "new" && <Button className="primary-action" onClick={onNew}><FilePlus2 size={17} /> Laporan baharu</Button>}</div>; }
 function CardHead({ number, title, subtitle }: { number: string; title: string; subtitle: string }) { return <div className="card-head"><span className="number-badge">{number}</span><div><h2>{title}</h2><p>{subtitle}</p></div></div>; }
