@@ -45,11 +45,15 @@ export type AuditEvent = {
   id: string;
   actorName: string;
   actorRole: Role;
-  eventType: "cipta" | "kemas_kini" | "semakan" | "hapus" | "pulih";
+  eventType: "cipta" | "kemas_kini" | "semakan" | "hapus" | "pulih" | "lampiran";
   action: string;
   createdAt: string;
   beforeData?: string | null;
   afterData?: string | null;
+};
+export type CaseAttachment = {
+  id: string; filename: string; contentType: string; size: number;
+  uploadedByName: string; createdAt: string;
 };
 export type Teacher = { id: string; name: string; position: string; role: Role };
 export type SchoolClass = { id: string; year: string; name: string; session: "Pagi" | "Petang"; classTeacher: string; students: { id: string; name: string }[] };
@@ -57,5 +61,5 @@ export type CaseRecord = {
   id: string; reporter: string; reporterId?: string | null; session: string; classId: string; className: string;
   student: string; studentId?: string | null; date: string; time: string; category: string; notes: string;
   initialAction: string; status: CaseStatus; createdAt: string; updatedAt: string; deletedAt?: string | null;
-  deletedBy?: string | null; events: AuditEvent[];
+  deletedBy?: string | null; events: AuditEvent[]; attachments: CaseAttachment[];
 };

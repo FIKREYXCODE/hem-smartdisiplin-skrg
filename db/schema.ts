@@ -35,6 +35,21 @@ export const caseEvents = sqliteTable("case_events", {
   createdAt: text("created_at").notNull(),
 }, table => [index("idx_case_events_case_id_created_at").on(table.caseId, table.createdAt)]);
 
+export const caseAttachments = sqliteTable("case_attachments", {
+  id: text("id").primaryKey(),
+  caseId: text("case_id").notNull().references(() => cases.id),
+  objectKey: text("object_key").notNull(),
+  filename: text("filename").notNull(),
+  contentType: text("content_type").notNull(),
+  size: integer("size").notNull(),
+  uploadedById: text("uploaded_by_id"),
+  uploadedByName: text("uploaded_by_name").notNull(),
+  createdAt: text("created_at").notNull(),
+}, table => [
+  index("idx_case_attachments_case_id_created_at").on(table.caseId, table.createdAt),
+  index("idx_case_attachments_object_key").on(table.objectKey),
+]);
+
 // Roster lives in D1, never in the Git repository. MyKad numbers are not stored.
 export const teachers = sqliteTable("teachers", {
   id: text("id").primaryKey(),

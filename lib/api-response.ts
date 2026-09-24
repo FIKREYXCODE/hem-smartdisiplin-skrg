@@ -4,7 +4,7 @@ const allowedOrigins = new Set([
   "http://127.0.0.1:5173",
 ]);
 
-function corsHeaders(request?: Request) {
+export function corsHeaders(request?: Request) {
   const origin = request?.headers.get("Origin") || "";
   return {
     "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://fikreyxcode.github.io",
