@@ -9,7 +9,7 @@ export function corsHeaders(request?: Request) {
   return {
     "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://fikreyxcode.github.io",
     "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Access-Code, X-Access-Role",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };

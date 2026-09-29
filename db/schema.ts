@@ -14,6 +14,8 @@ export const cases = sqliteTable("cases", {
   category: text("category").notNull(),
   notes: text("notes").notNull(),
   initialAction: text("initial_action").notNull().default(""),
+  location: text("location").notNull().default(""),
+  trafficStatus: text("traffic_status").notNull().default("red"),
   status: text("status").notNull().default("disiplin"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull().default(""),
@@ -21,6 +23,46 @@ export const cases = sqliteTable("cases", {
   deletedBy: text("deleted_by"),
   history: text("history").notNull().default("[]"),
 }, table => [index("idx_cases_created_at").on(table.createdAt), index("idx_cases_date").on(table.date), index("idx_cases_status").on(table.status)]);
+
+export const disciplineActions = sqliteTable("discipline_actions", {
+  id: text("id").primaryKey(),
+  caseId: text("case_id").notNull().references(() => cases.id),
+  actionType: text("action_type").notNull(),
+  otherAction: text("other_action").notNull().default(""),
+  details: text("details").notNull().default(""),
+  officerId: text("officer_id").notNull(),
+  officerName: text("officer_name").notNull(),
+  createdAt: text("created_at").notNull(),
+}, table => [index("idx_discipline_actions_case_created").on(table.caseId, table.createdAt)]);
+
+export const adminConfirmations = sqliteTable("admin_confirmations", {
+  id: text("id").primaryKey(),
+  caseId: text("case_id").notNull().references(() => cases.id),
+  decision: text("decision").notNull(),
+  adminId: text("admin_id").notNull(),
+  adminName: text("admin_name").notNull(),
+  position: text("position").notNull(),
+  notes: text("notes").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+}, table => [index("idx_admin_confirmations_case_created").on(table.caseId, table.createdAt)]);
+
+export const ssdmRequests = sqliteTable("ssdm_requests", {
+  id: text("id").primaryKey(),
+  caseId: text("case_id").notNull().references(() => cases.id),
+  pupilParentFeedback: text("pupil_parent_feedback").notNull().default(""),
+  recommendation: text("recommendation").notNull(),
+  otherRecommendation: text("other_recommendation").notNull().default(""),
+  extraNotes: text("extra_notes").notNull().default(""),
+  status: text("status").notNull().default("pending"),
+  requestedById: text("requested_by_id").notNull(),
+  requestedByName: text("requested_by_name").notNull(),
+  requestedAt: text("requested_at").notNull(),
+  decidedById: text("decided_by_id"),
+  decidedByName: text("decided_by_name"),
+  decidedByPosition: text("decided_by_position"),
+  decidedAt: text("decided_at"),
+  adminNotes: text("admin_notes").notNull().default(""),
+}, table => [index("idx_ssdm_requests_case").on(table.caseId), index("idx_ssdm_requests_status").on(table.status)]);
 
 export const caseEvents = sqliteTable("case_events", {
   id: text("id").primaryKey(),

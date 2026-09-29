@@ -33,6 +33,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     ]);
     if (!teacher || teacher.name !== actor) return apiJson({ error: "Identiti pengguna tidak sepadan dengan daftar guru." }, request, { status: 403 });
     if (!current) return apiJson({ error: "Kes tidak ditemui." }, request, { status: 404 });
+    if (current.reporterId !== actorId) return apiJson({ error: "Gambar hanya boleh ditambah oleh guru pelapor kes ini." }, request, { status: 403 });
     if (current.deletedAt) return apiJson({ error: "Gambar tidak boleh ditambah pada rekod yang dipadam." }, request, { status: 409 });
 
     const attachmentId = crypto.randomUUID();
