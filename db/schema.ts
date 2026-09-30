@@ -219,6 +219,9 @@ export const disciplineOrganizationMembers = sqliteTable("discipline_organizatio
   teacherId: text("teacher_id").references(() => teachers.id),
   displayName: text("display_name").notNull(),
   position: text("position").notNull(),
+  unit: text("unit").notNull().default("Disiplin"),
+  roleLabel: text("role_label").notNull().default("Ahli Jawatankuasa"),
+  hierarchyLevel: integer("hierarchy_level").notNull().default(4),
   level: text("level").notNull(),
   session: text("session"),
   sortOrder: integer("sort_order").notNull().default(0),
@@ -227,4 +230,4 @@ export const disciplineOrganizationMembers = sqliteTable("discipline_organizatio
   active: integer("active").notNull().default(1),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
-}, table => [index("idx_discipline_org_year_level").on(table.academicYear, table.level), index("idx_discipline_org_session_order").on(table.academicYear, table.session, table.sortOrder)]);
+}, table => [index("idx_discipline_org_year_level").on(table.academicYear, table.level), index("idx_discipline_org_hierarchy_order").on(table.academicYear, table.hierarchyLevel, table.sortOrder), index("idx_discipline_org_session_order").on(table.academicYear, table.session, table.sortOrder)]);
