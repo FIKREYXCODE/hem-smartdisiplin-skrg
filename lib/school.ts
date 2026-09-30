@@ -42,7 +42,7 @@ export const sessionForYear = (year: string | number) => Number(year) <= 3 ? "Pe
 export type Role = "Pelapor" | "Guru Kelas" | "Guru Disiplin" | "Pentadbir Sekolah" | "System Admin" | "Super Admin" | "PK HEM" | "Guru Besar";
 export type AccessRole = "reporter" | "class_teacher" | "discipline" | "school_admin" | "system_admin";
 export type UserRoleAssignment = { role: AccessRole; scopeId?: string | null; position?: string };
-export type AuthUser = { id: string; name: string; position: string; roles: UserRoleAssignment[]; superAdmin?: boolean };
+export type AuthUser = { id: string; name: string; position: string; roles: UserRoleAssignment[]; activeRole?: AccessRole; superAdmin?: boolean };
 export type CaseStatus = "disiplin" | "pk" | "besar" | "selesai";
 export type TrafficStatus = "red" | "yellow" | "green";
 export type AuditEvent = {

@@ -1,7 +1,7 @@
 import { addEvent, database, getCase, toRecord } from "@/lib/cases-db";
 import { apiJson, apiOptions } from "@/lib/api-response";
-import { auditAccess, hasRole, isSuperAdmin, requireUser, roleScopes } from "@/lib/auth";
-import { canUseView, type CaseView } from "@/lib/authorization";
+import { auditAccess, hasActiveRole, isSuperAdmin, requireUser } from "@/lib/auth";
+import { accessContext, canUseView, type CaseView } from "@/lib/authorization";
 import { categories, sessionForYear } from "@/lib/school";
 export const runtime = "edge";
 export function OPTIONS(request: Request) { return apiOptions(request); }
@@ -14,14 +14,14 @@ function authError(error: unknown, request: Request) {
 export async function GET(request: Request) {
   try {
     const user = await requireUser(request); const url = new URL(request.url); const view = (url.searchParams.get("view") || "mine") as CaseView;
-    if (!["mine", "class", "discipline", "admin"].includes(view) || !canUseView(user, view)) return apiJson({ error: "Anda tidak mempunyai kebenaran untuk paparan ini." }, request, { status: 403 });
+    if (!["mine", "class", "discipline", "admin"].includes(view) || !canUseView(user, view, request)) return apiJson({ error: "Anda tidak mempunyai kebenaran untuk paparan ini." }, request, { status: 403 });
     let where = "c.deleted_at IS NULL"; const binds: string[] = [];
     if (view === "mine") { where += " AND c.reporter_id = ?"; binds.push(user.id); }
     else if (view === "class") {
-      const previewClass = url.searchParams.get("classId");
-      const scopes = isSuperAdmin(user) && previewClass ? [previewClass] : roleScopes(user, "class_teacher"); if (!scopes.length) return apiJson({ records: [] }, request);
+      const scopes = accessContext(user, request).classIds;
+      if (!scopes.length) return apiJson({ records: [], scopeWarning: "Kelas belum ditetapkan untuk akaun ini. Sila hubungi Pentadbir Sistem." }, request);
       where += ` AND c.class_id IN (${scopes.map(() => "?").join(",")})`; binds.push(...scopes);
-    } else if (view === "admin") where += " AND (c.admin_review_requested = 1 OR EXISTS (SELECT 1 FROM ssdm_requests s WHERE s.case_id = c.id AND s.status = 'pending'))";
+    }
     const statement = database().prepare(`SELECT c.* FROM cases c WHERE ${where} ORDER BY c.updated_at DESC, c.created_at DESC LIMIT 1000`);
     const result = await (binds.length ? statement.bind(...binds) : statement).all();
     await auditAccess(user, "case_list_view", `Paparan: ${view}`);
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   let input: Record<string, unknown>; try { input = await request.json(); } catch { return apiJson({ error: "Format laporan tidak sah." }, request, { status: 400 }); }
   try {
-    const user = await requireUser(request); if (!hasRole(user, "reporter") && !isSuperAdmin(user)) return apiJson({ error: "Akses pelapor diperlukan." }, request, { status: 403 });
+    const user = await requireUser(request); if (!hasActiveRole(user, "reporter")) return apiJson({ error: "Akses pelapor diperlukan." }, request, { status: 403 });
     const session = String(input.session || ""); const classId = String(input.classId || ""); const studentId = String(input.studentId || ""); const date = String(input.date || ""); const time = String(input.time || ""); const category = String(input.category || ""); const location = String(input.location || "").trim(); const notes = String(input.notes || "").trim(); const initialAction = String(input.initialAction || "").trim();
     if (!classId || !studentId || !location || location.length > 200 || !categories.includes(category as never) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date > new Date().toISOString().slice(0, 10) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) || notes.length < 10 || notes.length > 3000 || initialAction.length > 1500) return apiJson({ error: "Semak semula semua medan wajib." }, request, { status: 400 });
     const schoolClass = await database().prepare("SELECT id, name, year FROM classes WHERE id = ? AND active = 1").bind(classId).first<{ id: string; name: string; year: string }>(); const student = await database().prepare("SELECT id, name FROM students WHERE id = ? AND class_id = ? AND active = 1").bind(studentId, classId).first<{ id: string; name: string }>();

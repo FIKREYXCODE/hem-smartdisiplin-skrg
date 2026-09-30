@@ -1,19 +1,35 @@
 import type { AuthUser, CaseRecord } from "./school";
-import { hasRole, isSuperAdmin, roleScopes } from "./auth";
+import { isSuperAdmin, roleScopes } from "./auth";
 
 export type CaseView = "mine" | "class" | "discipline" | "admin";
-export function canUseView(user: AuthUser, view: CaseView) {
-  if (isSuperAdmin(user)) return true;
-  if (view === "mine") return true;
-  if (view === "class") return hasRole(user, "class_teacher");
-  if (view === "discipline") return hasRole(user, "discipline");
-  return hasRole(user, "school_admin");
+export type AccessContext = { role: "super_admin" | "reporter" | "class_teacher" | "discipline" | "school_admin"; classIds: string[] };
+export function accessContext(user: AuthUser, request?: Request): AccessContext {
+  if (isSuperAdmin(user)) {
+    const preview = request?.headers.get("X-View-As");
+    if (preview === "reporter" || preview === "discipline" || preview === "school_admin") return { role: preview, classIds: [] };
+    if (preview === "class_teacher") return { role: preview, classIds: [request?.headers.get("X-View-As-Class") || ""].filter(Boolean) };
+    return { role: "super_admin", classIds: [] };
+  }
+  const role = user.activeRole;
+  if (role === "reporter" || role === "class_teacher" || role === "discipline" || role === "school_admin") {
+    return { role, classIds: role === "class_teacher" ? roleScopes(user, "class_teacher") : [] };
+  }
+  return { role: "reporter", classIds: [] };
 }
-export function canViewCase(user: AuthUser, record: CaseRecord) {
-  if (isSuperAdmin(user)) return true;
-  if (record.reporterId === user.id) return true;
-  if (hasRole(user, "discipline")) return true;
-  if (hasRole(user, "class_teacher") && roleScopes(user, "class_teacher").includes(record.classId)) return true;
-  if (hasRole(user, "school_admin") && (record.adminReviewRequested || record.ssdmRequest?.status === "pending")) return true;
-  return false;
+export function canViewAllCases(user: AuthUser, request?: Request) {
+  return ["super_admin", "discipline", "school_admin"].includes(accessContext(user, request).role);
+}
+export function canUseView(user: AuthUser, view: CaseView, request?: Request) {
+  const role = accessContext(user, request).role;
+  if (role === "super_admin") return true;
+  if (view === "mine") return role === "reporter";
+  if (view === "class") return role === "class_teacher";
+  if (view === "discipline") return role === "discipline";
+  return role === "school_admin";
+}
+export function canViewCase(user: AuthUser, record: CaseRecord, request?: Request) {
+  const context = accessContext(user, request);
+  if (["super_admin", "discipline", "school_admin"].includes(context.role)) return true;
+  if (context.role === "reporter") return record.reporterId === user.id;
+  return context.role === "class_teacher" && context.classIds.includes(record.classId);
 }

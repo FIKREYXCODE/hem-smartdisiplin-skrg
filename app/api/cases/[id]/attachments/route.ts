@@ -1,7 +1,7 @@
 import { addEvent, bucket, database, getCase, toAttachment } from "@/lib/cases-db";
 import { apiJson, apiOptions } from "@/lib/api-response";
 import type { Role } from "@/lib/school";
-import { hasRole, isSuperAdmin, requireUser } from "@/lib/auth";
+import { hasActiveRole, isSuperAdmin, requireUser } from "@/lib/auth";
 
 export const runtime = "edge";
 export function OPTIONS(request: Request) { return apiOptions(request); }
@@ -25,10 +25,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!file.size || file.size > maxImageBytes) return apiJson({ error: "Setiap gambar mestilah tidak melebihi 12 MB." }, request, { status: 413 });
 
   try {
-    const user = await requireUser(request); const actorId = user.id; const actor = user.name; const role = (hasRole(user, "discipline") ? "Guru Disiplin" : "Pelapor") as Role;
+    const user = await requireUser(request); const actorId = user.id; const actor = user.name; const role = (hasActiveRole(user, "discipline") ? "Guru Disiplin" : "Pelapor") as Role;
     const current = await getCase(caseId);
     if (!current) return apiJson({ error: "Kes tidak ditemui." }, request, { status: 404 });
-    if (current.reporterId !== actorId && !hasRole(user, "discipline") && !isSuperAdmin(user)) return apiJson({ error: "Gambar hanya boleh ditambah oleh pelapor atau Guru Disiplin." }, request, { status: 403 });
+    if ((current.reporterId !== actorId || !hasActiveRole(user,"reporter")) && !hasActiveRole(user, "discipline") && !isSuperAdmin(user)) return apiJson({ error: "Gambar hanya boleh ditambah oleh pelapor atau Guru Disiplin." }, request, { status: 403 });
     if (current.deletedAt) return apiJson({ error: "Gambar tidak boleh ditambah pada rekod yang dipadam." }, request, { status: 409 });
 
     const attachmentId = crypto.randomUUID();

@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const user = await requireUser(request);
     const attachment = await database().prepare("SELECT case_id, object_key, filename, content_type FROM case_attachments WHERE id = ?").bind(id).first<{ case_id:string; object_key: string; filename: string; content_type: string }>();
     if (!attachment) return apiJson({ error: "Gambar tidak ditemui." }, request, { status: 404 });
-    const record = await getCase(attachment.case_id); if (!record || !canViewCase(user, record)) return apiJson({ error: "Akses gambar ditolak." }, request, { status: 403 });
+    const record = await getCase(attachment.case_id); if (!record || !canViewCase(user, record, request)) return apiJson({ error: "Akses gambar ditolak." }, request, { status: 403 });
     const object = await bucket().get(attachment.object_key);
     if (!object) return apiJson({ error: "Fail gambar tidak ditemui." }, request, { status: 404 });
     const safeFilename = attachment.filename.replace(/["\r\n]/g, "_");
