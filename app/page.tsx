@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { AlertTriangle, BarChart3, ChevronRight, ClipboardCheck, ClipboardList, Download, FilePlus2, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, LogOut, Pencil, Printer, Search, Settings, ShieldCheck, Trash2, UserRound, UsersRound, X } from "lucide-react";
+import { AlertTriangle, BarChart3, ChevronRight, ClipboardCheck, ClipboardList, Download, Eye, EyeOff, FilePlus2, ImagePlus, KeyRound, LayoutDashboard, LockKeyhole, LogOut, Pencil, Printer, Search, Settings, ShieldCheck, Trash2, UserRound, UsersRound, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,7 +95,43 @@ export default function Home(){
   <ManageUserDialog user={manageUser} classes={systemClasses} roles={roleDraft} setRoles={setRoleDraft} toggleRole={toggleRole} busy={busy} onSave={saveRoles} onClose={()=>setManageUser(null)}/><ActivationDialog result={activationResult} onClose={()=>setActivationResult(null)}/></div>;
 }
 
-function LoginScreen(p:{category:AccessRole;setCategory:(v:AccessRole)=>void;accounts:LoginAccount[];accountId:string;setAccountId:(v:string)=>void;account?:LoginAccount;activationCode:string;setActivationCode:(v:string)=>void;password:string;setPassword:(v:string)=>void;confirm:string;setConfirm:(v:string)=>void;busy:boolean;message:string;onSubmit:(e:FormEvent)=>void}){const cats:AccessRole[]=["reporter","class_teacher","discipline","school_admin","system_admin"];return <div className="login-page"><section className="login-brand"><img src={assetUrl("/sk-ranggu-cutout.png")} alt="Logo SK Ranggu"/><h1>HEM <span>SmartDisiplin</span></h1><p>SEKOLAH KEBANGSAAN RANGGU<br/>PETI SURAT 842, 91008 TAWAU, SABAH</p></section><form className="login-card" onSubmit={p.onSubmit}><LockKeyhole size={34}/><h2>Login pengguna</h2><p>Pilih kategori dan akaun sendiri. Senarai setiap kategori diasingkan.</p><div className="login-categories">{cats.map(c=><button type="button" key={c} className={p.category===c?"active":""} onClick={()=>p.setCategory(c)}>{roleNames[c]}</button>)}</div><label>{p.category==="school_admin"?"Jawatan Pentadbir":"Nama pengguna"}<Picker value={p.accountId} onChange={p.setAccountId} placeholder={p.category==="school_admin"?"Pilih jawatan":"Pilih akaun sendiri"} options={p.accounts.map(a=>({value:a.id,label:p.category==="school_admin"?a.position:a.name}))}/></label>{p.account&&<><div className={`account-state ${p.account.passwordSet?"ready":"first"}`}>{p.account.passwordSet?"Password telah ditetapkan. Sila login.":"Akaun memerlukan kod pengaktifan sementara daripada System Admin."}</div>{!p.account.passwordSet&&<label>Kod pengaktifan sementara<Input autoComplete="one-time-code" value={p.activationCode} onChange={e=>p.setActivationCode(e.target.value.toUpperCase())} placeholder="SKRG-XXXX-XXXX-XXXX"/></label>}<label>Password<Input type="password" autoComplete={p.account.passwordSet?"current-password":"new-password"} value={p.password} onChange={e=>p.setPassword(e.target.value)} placeholder="Minimum 10 aksara, huruf dan nombor"/></label>{!p.account.passwordSet&&<label>Sahkan password<Input type="password" autoComplete="new-password" value={p.confirm} onChange={e=>p.setConfirm(e.target.value)}/></label>}<Button className="primary-action" disabled={p.busy||p.password.length<10||(!p.account.passwordSet&&(!p.activationCode||p.password!==p.confirm))}>{p.busy?"Memproses...":p.account.passwordSet?"Login":"Aktifkan Akaun & Cipta Password"}</Button></>}{p.message&&<div className="login-error">{p.message}</div>}<small>Password di-hash dan tidak boleh dilihat oleh pengguna lain atau System Admin.</small></form></div>;}
+function LoginScreen(p:{category:AccessRole;setCategory:(v:AccessRole)=>void;accounts:LoginAccount[];accountId:string;setAccountId:(v:string)=>void;account?:LoginAccount;activationCode:string;setActivationCode:(v:string)=>void;password:string;setPassword:(v:string)=>void;confirm:string;setConfirm:(v:string)=>void;busy:boolean;message:string;onSubmit:(e:FormEvent)=>void}){
+  const [showPassword,setShowPassword]=useState(false);
+  const cats:{role:AccessRole;icon:ReactNode}[]=[
+    {role:"reporter",icon:<FilePlus2/>},{role:"class_teacher",icon:<UsersRound/>},{role:"discipline",icon:<ShieldCheck/>},{role:"school_admin",icon:<ClipboardCheck/>},{role:"system_admin",icon:<Settings/>},
+  ];
+  const setup=!!p.account&&!p.account.passwordSet;
+  return <div className="login-page">
+    <section className="login-brand" aria-label="Identiti HEM SmartDisiplin">
+      <div className="login-brand-glow login-brand-glow-one"/><div className="login-brand-glow login-brand-glow-two"/>
+      <div className="login-brand-content">
+        <div className="login-logo-wrap"><img src={assetUrl("/sk-ranggu-cutout.png")} alt="Logo Sekolah Kebangsaan Ranggu"/></div>
+        <div className="login-brand-name"><span>HEM</span><strong>SmartDisiplin</strong></div>
+        <p className="login-product">Sistem Pengurusan Disiplin Murid</p>
+        <div className="login-school"><strong>SEKOLAH KEBANGSAAN RANGGU</strong><span>Tawau, Sabah</span></div>
+        <div className="login-tagline"><i/><span>Rekod</span><b>•</b><span>Pantau</span><b>•</b><span>Tindakan</span></div>
+      </div>
+    </section>
+    <section className="login-workspace">
+      <form className="login-card" onSubmit={p.onSubmit}>
+        <header className="login-card-head"><span className="login-lock"><LockKeyhole/></span><div><small>SELAMAT DATANG</small><h1>Login ke HEM SmartDisiplin</h1><p>Pilih akses anda untuk meneruskan.</p></div></header>
+        <div className="login-categories" role="group" aria-label="Pilih kategori akses">{cats.map(c=><button type="button" key={c.role} aria-pressed={p.category===c.role} className={p.category===c.role?"active":""} onClick={()=>p.setCategory(c.role)}><span>{c.icon}</span>{roleNames[c.role]}</button>)}</div>
+        <div className="login-fields">
+          <label>{p.category==="school_admin"?"Jawatan Pentadbir":"Nama Pengguna"}<div className="login-select-wrap"><UserRound aria-hidden="true"/><Picker value={p.accountId} onChange={p.setAccountId} placeholder={p.category==="school_admin"?"Pilih jawatan":"Pilih akaun sendiri"} options={p.accounts.map(a=>({value:a.id,label:p.category==="school_admin"?a.position:a.name}))}/></div></label>
+          {p.account&&<section className={`login-account-flow ${setup?"setup":"ready"}`} aria-live="polite">
+            {setup&&<div className="setup-heading"><span><KeyRound/></span><div><strong>Aktifkan Akaun</strong><p>Gunakan kod sementara daripada System Admin dan cipta password sendiri.</p></div></div>}
+            {setup&&<label>Kod Pengaktifan<Input autoComplete="one-time-code" value={p.activationCode} onChange={e=>p.setActivationCode(e.target.value.toUpperCase())} placeholder="SKRG-XXXX-XXXX-XXXX"/></label>}
+            <label>{setup?"Password Baharu":"Password"}<div className="password-wrap"><LockKeyhole aria-hidden="true"/><Input type={showPassword?"text":"password"} autoComplete={setup?"new-password":"current-password"} value={p.password} onChange={e=>p.setPassword(e.target.value)} placeholder={setup?"Minimum 10 aksara, huruf dan nombor":"Masukkan password anda"}/><button type="button" aria-label={showPassword?"Sembunyikan password":"Paparkan password"} onClick={()=>setShowPassword(v=>!v)}>{showPassword?<EyeOff/>:<Eye/>}</button></div></label>
+            {setup&&<label>Sahkan Password<Input type={showPassword?"text":"password"} autoComplete="new-password" value={p.confirm} onChange={e=>p.setConfirm(e.target.value)} placeholder="Masukkan semula password baharu"/></label>}
+            <Button className="login-submit" disabled={p.busy||p.password.length<10||(setup&&(!p.activationCode||p.password!==p.confirm))}>{p.busy?<><span className="login-spinner"/>MEMPROSES...</>:setup?"AKTIFKAN AKAUN":"MASUK KE SISTEM"}</Button>
+          </section>}
+        </div>
+        {p.message&&<div className="login-error" role="alert">{p.message}</div>}
+        <footer>HEM SmartDisiplin <span>•</span> SK Ranggu</footer>
+      </form>
+    </section>
+  </div>;
+}
 function Brand(){return <div className="brand"><img src={assetUrl("/sk-ranggu-cutout.png")} width={48} height={58} alt="Logo SK Ranggu"/><div><strong>HEM <span>SmartDisiplin</span></strong><small>SK RANGGU · TAWAU</small></div></div>;}
 function Nav({active,onClick,icon,label}:{active:boolean;onClick:()=>void;icon:ReactNode;label:string}){return <button className={active?"active":""} onClick={onClick}>{icon}{label}</button>;}
 function PageHead({view,onNew}:{view:View;onNew:()=>void}){const map:Record<View,[string,string]>={dashboard:["Ringkasan Saya","Pantau laporan yang dihantar oleh anda."],new:["Laporan salah laku murid","Rekodkan fakta kejadian dengan tepat."],records:["Laporan Saya","Hanya laporan yang dihantar oleh anda."],class:["Murid Kelas Saya","Kes murid di bawah kelas jagaan anda sahaja."],discipline:["Pengurusan Guru Disiplin","Keseluruhan laporan sekolah dan tindakan disiplin."],admin:["Pengesahan Pentadbir","Hanya kes yang menunggu pengesahan atau keputusan SSDM."],analysis:["Analisis Semua Kes","Paparan penuh khusus Guru Disiplin."],system:["Pengurusan Sistem","Akaun, role, kelas dan reset password tanpa akses semua kes."]};return <div className="page-heading"><div><div className="eyebrow">HEM / {view.toUpperCase()}</div><h1>{map[view][0]}</h1><p>{map[view][1]}</p></div>{view!=="new"&&<Button className="primary-action" onClick={onNew}><FilePlus2 size={17}/>Laporan baharu</Button>}</div>;}
