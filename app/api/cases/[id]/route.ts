@@ -7,7 +7,7 @@ export const runtime = "edge";
 export function OPTIONS(request: Request) { return apiOptions(request); }
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try { const user = await requireUser(request); const { id } = await params; const record = await getCase(id); if (!record) return apiJson({ error: "Kes tidak ditemui." }, request, { status: 404 }); if (!canViewCase(user, record)) return apiJson({ error: "Akses kepada kes ini ditolak." }, request, { status: 403 }); await addEvent(id, user.id, user.name, "Pelapor", "semakan", "Butiran kes dibuka.", null, null); await auditAccess(user, "case_opened", id); return apiJson({ record: await getCase(id) }, request); }
+  try { const user = await requireUser(request); const { id } = await params; const record = await getCase(id); if (!record) return apiJson({ error: "Kes tidak ditemui." }, request, { status: 404 }); if (!canViewCase(user, record)) return apiJson({ error: "Akses kepada kes ini ditolak." }, request, { status: 403 }); const actorRole = hasRole(user, "discipline") ? "Guru Disiplin" : hasRole(user, "school_admin") ? "Pentadbir Sekolah" : hasRole(user, "class_teacher") ? "Guru Kelas" : "Pelapor"; await addEvent(id, user.id, user.name, actorRole, "semakan", "Butiran kes dibuka.", null, null); await auditAccess(user, "case_opened", id); return apiJson({ record: await getCase(id) }, request); }
   catch (error) { if (error instanceof Response) return apiJson({ error: "Sesi tidak sah." }, request, { status: error.status }); return apiJson({ error: "Kes tidak dapat dibuka." }, request, { status: 503 }); }
 }
 

@@ -35,6 +35,9 @@ export const disciplineActions = sqliteTable("discipline_actions", {
   actionDate: text("action_date").notNull().default(""),
   actionTime: text("action_time").notNull().default(""),
   additionalNotes: text("additional_notes").notNull().default(""),
+  actionTypes: text("action_types").notNull().default("[]"),
+  pupilFeedback: text("pupil_feedback").notNull().default(""),
+  parentFeedback: text("parent_feedback").notNull().default(""),
   officerId: text("officer_id").notNull(),
   officerName: text("officer_name").notNull(),
   createdAt: text("created_at").notNull(),
@@ -55,6 +58,8 @@ export const ssdmRequests = sqliteTable("ssdm_requests", {
   id: text("id").primaryKey(),
   caseId: text("case_id").notNull().references(() => cases.id),
   pupilParentFeedback: text("pupil_parent_feedback").notNull().default(""),
+  pupilFeedback: text("pupil_feedback").notNull().default(""),
+  parentFeedback: text("parent_feedback").notNull().default(""),
   recommendation: text("recommendation").notNull(),
   otherRecommendation: text("other_recommendation").notNull().default(""),
   extraNotes: text("extra_notes").notNull().default(""),
@@ -67,6 +72,9 @@ export const ssdmRequests = sqliteTable("ssdm_requests", {
   decidedByPosition: text("decided_by_position"),
   decidedAt: text("decided_at"),
   adminNotes: text("admin_notes").notNull().default(""),
+  recordedAt: text("recorded_at"),
+  recordedById: text("recorded_by_id"),
+  recordedByName: text("recorded_by_name"),
 }, table => [index("idx_ssdm_requests_case").on(table.caseId), index("idx_ssdm_requests_status").on(table.status)]);
 
 export const caseEvents = sqliteTable("case_events", {
@@ -130,10 +138,21 @@ export const userAccounts = sqliteTable("user_accounts", {
   passwordIterations: integer("password_iterations").notNull().default(210000),
   passwordSetAt: text("password_set_at"),
   resetAt: text("reset_at"),
+  status: text("status").notNull().default("needs_setup"),
   active: integer("active").notNull().default(1),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 }, table => [index("idx_user_accounts_active").on(table.active)]);
+
+export const accountActivationTokens = sqliteTable("account_activation_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => teachers.id),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+}, table => [index("idx_activation_token_hash").on(table.tokenHash), index("idx_activation_user_active").on(table.userId, table.expiresAt)]);
 
 export const userRoles = sqliteTable("user_roles", {
   id: text("id").primaryKey(),
@@ -161,6 +180,7 @@ export const accessAudit = sqliteTable("access_audit", {
   id: text("id").primaryKey(),
   userId: text("user_id"),
   actorName: text("actor_name").notNull(),
+  actorRole: text("actor_role").notNull().default(""),
   eventType: text("event_type").notNull(),
   targetUserId: text("target_user_id"),
   details: text("details").notNull().default(""),

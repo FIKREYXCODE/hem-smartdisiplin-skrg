@@ -1,7 +1,7 @@
 import { database } from "./cases-db";
 import type { AccessRole } from "./school";
 
-const SEED_VERSION = "access_seed_v3";
+const SEED_VERSION = "access_seed_v4";
 const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 const classTeacherMap: Record<string, string> = {
@@ -42,6 +42,10 @@ export async function ensureAccessSeeded() {
   }
   const byName = new Map(teachers.map(t => [normalize(t.name), t]));
   const statements: D1PreparedStatement[] = [];
+  statements.push(database().prepare("UPDATE user_accounts SET status='ready' WHERE password_hash IS NOT NULL AND status<>'ready'"));
+  // Rebuild only the class-teacher assignments from the approved mapping. Cases,
+  // pupils, classes, accounts and all other roles remain untouched.
+  statements.push(database().prepare("DELETE FROM user_roles WHERE role='class_teacher'"));
   const addRole = (teacher: TeacherRow | undefined, role: AccessRole, scopeId: string | null = null, position = "") => {
     if (!teacher) return;
     const id = `${teacher.id}:${role}:${scopeId || "all"}`;
