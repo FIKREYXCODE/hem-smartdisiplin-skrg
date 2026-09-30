@@ -1,5 +1,6 @@
 import type { AuthUser, CaseRecord } from "./school";
 import { isSuperAdmin, roleScopes } from "./auth";
+import { isCaseInClassScope } from "./participant-rules";
 
 export type CaseView = "mine" | "class" | "discipline" | "admin";
 export type AccessContext = { role: "super_admin" | "reporter" | "class_teacher" | "discipline" | "school_admin"; classIds: string[] };
@@ -31,5 +32,5 @@ export function canViewCase(user: AuthUser, record: CaseRecord, request?: Reques
   const context = accessContext(user, request);
   if (["super_admin", "discipline", "school_admin"].includes(context.role)) return true;
   if (context.role === "reporter") return record.reporterId === user.id;
-  return context.role === "class_teacher" && context.classIds.includes(record.classId);
+  return context.role === "class_teacher" && isCaseInClassScope(record.participants, record.classId, context.classIds);
 }

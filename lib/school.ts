@@ -64,11 +64,12 @@ export type AdminConfirmation = { id: string; decision: "acknowledged" | "furthe
 export type SsdmRequest = { id: string; pupilParentFeedback: string; pupilFeedback: string; parentFeedback: string; recommendation: string; otherRecommendation: string; extraNotes: string; status: "pending" | "approved" | "rejected" | "returned" | "needs_further_action" | "recorded"; requestedById: string; requestedByName: string; requestedAt: string; decidedById?: string | null; decidedByName?: string | null; decidedByPosition?: string | null; decidedAt?: string | null; adminNotes: string; recordedAt?: string | null; recordedById?: string | null; recordedByName?: string | null };
 export type Teacher = { id: string; name: string; position: string; role: Role };
 export type SchoolClass = { id: string; year: string; name: string; session: "Pagi" | "Petang"; classTeacher: string; students: { id: string; name: string }[] };
+export type CaseParticipant = { id: string; studentId?: string | null; studentName: string; classId: string; className: string };
 export type CaseRecord = {
   id: string; reporter: string; reporterId?: string | null; session: string; classId: string; className: string;
   student: string; studentId?: string | null; date: string; time: string; category: string; notes: string;
   initialAction: string; location: string; trafficStatus: TrafficStatus; status: CaseStatus; createdAt: string; updatedAt: string; deletedAt?: string | null;
-  adminReviewRequested: boolean; adminReviewRequestedAt?: string | null; deletedBy?: string | null; events: AuditEvent[]; attachments: CaseAttachment[]; disciplineActions: DisciplineAction[]; adminConfirmations: AdminConfirmation[]; ssdmRequest?: SsdmRequest | null;
+  adminReviewRequested: boolean; adminReviewRequestedAt?: string | null; deletedBy?: string | null; participants: CaseParticipant[]; events: AuditEvent[]; attachments: CaseAttachment[]; disciplineActions: DisciplineAction[]; adminConfirmations: AdminConfirmation[]; ssdmRequest?: SsdmRequest | null;
 };
 
 export const disciplineActionOptions = ["Teguran", "Nasihat", "Amaran lisan", "Amaran bertulis", "Sesi kaunseling", "Hubungi ibu bapa / penjaga", "Pertemuan ibu bapa / penjaga", "Siasatan lanjut", "Rujukan Guru Kelas", "Rujukan Guru Bimbingan dan Kaunseling", "Rujukan PK HEM", "Rujukan Guru Besar", "Pemantauan murid", "Lain-lain"] as const;

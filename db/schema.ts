@@ -133,6 +133,23 @@ export const students = sqliteTable("students", {
   active: integer("active").notNull().default(1),
 }, table => [index("idx_students_class_id_name").on(table.classId, table.name)]);
 
+// A single incident can involve pupils from several classes. The legacy pupil
+// and class columns on `cases` stay populated with the first participant so
+// older records and integrations continue to work.
+export const caseParticipants = sqliteTable("case_participants", {
+  id: text("id").primaryKey(),
+  caseId: text("case_id").notNull().references(() => cases.id),
+  studentId: text("student_id").references(() => students.id),
+  classId: text("class_id").notNull().references(() => classes.id),
+  studentName: text("student_name").notNull(),
+  className: text("class_name").notNull(),
+  createdAt: text("created_at").notNull(),
+}, table => [
+  index("idx_case_participants_case").on(table.caseId),
+  index("idx_case_participants_student").on(table.studentId),
+  index("idx_case_participants_class").on(table.classId),
+]);
+
 export const userAccounts = sqliteTable("user_accounts", {
   userId: text("user_id").primaryKey().references(() => teachers.id),
   passwordHash: text("password_hash"),
