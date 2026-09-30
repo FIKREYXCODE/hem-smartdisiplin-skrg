@@ -7,7 +7,7 @@ export function OPTIONS(request: Request) { return apiOptions(request); }
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params; let input: Record<string, unknown>; try { input = await request.json(); } catch { return apiJson({ error: "Format tidak sah." }, request, { status: 400 }); }
   try {
-    const user = await requireUser(request); if (!hasActiveRole(user, "discipline")) return apiJson({ error: "Akses Guru Disiplin diperlukan." }, request, { status: 403 });
+    const user = await requireUser(request); if (!hasActiveRole(user, "discipline", request)) return apiJson({ error: "Akses Guru Disiplin diperlukan." }, request, { status: 403 });
     const actorRole = isSuperAdmin(user) ? "Super Admin" : "Guru Disiplin"; const actorPrefix = isSuperAdmin(user) ? "Super Admin melalui View As Guru Disiplin: " : "";
     const mode = String(input.mode || "action"); const record = await getCase(id); if (!record || record.deletedAt) return apiJson({ error: "Kes aktif tidak ditemui." }, request, { status: 404 }); const now = new Date().toISOString();
     if (mode === "submit_admin") {

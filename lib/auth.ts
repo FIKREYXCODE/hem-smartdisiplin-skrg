@@ -93,7 +93,11 @@ export async function requireUser(request: Request): Promise<AuthUser> {
 export function hasRole(user: AuthUser, role: AccessRole) { return user.roles.some(r => r.role === role); }
 export function isSuperAdmin(user: AuthUser) { return user.superAdmin === true && hasRole(user, "system_admin"); }
 export function roleScopes(user: AuthUser, role: AccessRole) { return user.roles.filter(r => r.role === role).map(r => r.scopeId).filter(Boolean) as string[]; }
-export function hasActiveRole(user: AuthUser, role: AccessRole) { return isSuperAdmin(user) || user.activeRole === role; }
+export function hasActiveRole(user: AuthUser, role: AccessRole, request?: Request) {
+  if (!isSuperAdmin(user)) return user.activeRole === role;
+  const preview = request?.headers.get("X-View-As");
+  return preview ? preview === role : true;
+}
 export async function auditAccess(user: AuthUser | null, eventType: string, details = "", targetUserId: string | null = null) {
   await database().prepare("INSERT INTO access_audit (id, user_id, actor_name, actor_role, event_type, target_user_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), user?.id || null, user?.name || "ANON", user?.roles.map(r=>r.role).join(",")||"", eventType, targetUserId, details, new Date().toISOString()).run();
 }
