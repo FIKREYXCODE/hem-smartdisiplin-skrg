@@ -52,7 +52,7 @@ export async function ensureAccessSeeded() {
     statements.push(database().prepare("INSERT OR IGNORE INTO user_roles (id, user_id, role, scope_id, position, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, 'system')").bind(id, teacher.id, role, scopeId, position, now));
   };
   for (const teacher of teachers) {
-    statements.push(database().prepare("INSERT OR IGNORE INTO user_accounts (user_id, password_iterations, active, created_at, updated_at) VALUES (?, 210000, 1, ?, ?)").bind(teacher.id, now, now));
+    statements.push(database().prepare("INSERT OR IGNORE INTO user_accounts (user_id, password_iterations, active, created_at, updated_at) VALUES (?, 100000, 1, ?, ?)").bind(teacher.id, now, now));
     addRole(teacher, "reporter");
   }
   for (const cls of classResult.results) {

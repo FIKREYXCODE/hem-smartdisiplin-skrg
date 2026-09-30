@@ -2,7 +2,8 @@ import { database } from "./cases-db";
 import type { AccessRole, AuthUser, UserRoleAssignment } from "./school";
 import { ensureAccessSeeded } from "./access-seed";
 
-const ITERATIONS = 210000;
+const ITERATIONS = 100000;
+export const TEMPORARY_PASSWORD = "P3nd1d1kan";
 const SESSION_HOURS = 12;
 const enc = new TextEncoder();
 const hex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
@@ -15,39 +16,31 @@ async function passwordDigest(password: string, saltHex: string, iterations = IT
 }
 function safeEqual(a: string, b: string) { let diff = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return diff === 0; }
 export function validPassword(value: string) { return value.length >= 10 && value.length <= 128 && /[A-Za-z]/.test(value) && /\d/.test(value); }
-const normalizeActivationCode = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^SKRG/, "");
-export async function activationCodeHash(value: string) { return sha256(normalizeActivationCode(value)); }
-export function generateActivationCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
-  const raw = Array.from(bytes, byte => alphabet[byte % alphabet.length]).join("");
-  return `SKRG-${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8)}`;
-}
-
-export async function issueActivationCode(userId: string, createdBy: string) {
-  const code = generateActivationCode(); const now = new Date(); const expires = new Date(now.getTime() + 72 * 3600000); const hash = await activationCodeHash(code);
+export async function issueTemporaryPassword(userId: string) {
+  await ensureAccessSeeded();
+  const salt = crypto.getRandomValues(new Uint8Array(16)); const saltHex = hex(salt); const hash = await passwordDigest(TEMPORARY_PASSWORD, saltHex); const now = new Date().toISOString();
   await database().batch([
-    database().prepare("UPDATE account_activation_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL").bind(now.toISOString(), userId),
-    database().prepare("INSERT INTO account_activation_tokens (id,user_id,token_hash,expires_at,used_at,created_by,created_at) VALUES (?,?,?,?,NULL,?,?)").bind(crypto.randomUUID(), userId, hash, expires.toISOString(), createdBy, now.toISOString()),
-    database().prepare("UPDATE user_accounts SET status='needs_setup',password_hash=NULL,password_salt=NULL,password_set_at=NULL,reset_at=?,updated_at=? WHERE user_id=?").bind(now.toISOString(), now.toISOString(), userId),
+    database().prepare("UPDATE user_accounts SET password_hash=?,password_salt=?,password_iterations=?,password_set_at=NULL,reset_at=?,status='temporary',updated_at=? WHERE user_id=?").bind(hash,saltHex,ITERATIONS,now,now,userId),
+    database().prepare("UPDATE account_activation_tokens SET used_at=? WHERE user_id=? AND used_at IS NULL").bind(now,userId),
     database().prepare("DELETE FROM auth_sessions WHERE user_id=?").bind(userId),
   ]);
-  return { code, expiresAt: expires.toISOString() };
+  return TEMPORARY_PASSWORD;
 }
 
-export async function verifyActivationCode(userId: string, code: string) {
-  if (normalizeActivationCode(code).length !== 12) return null;
-  const row = await database().prepare("SELECT id FROM account_activation_tokens WHERE user_id=? AND token_hash=? AND used_at IS NULL AND expires_at>? ORDER BY created_at DESC LIMIT 1").bind(userId, await activationCodeHash(code), new Date().toISOString()).first<{id:string}>();
-  return row?.id || null;
-}
-
-export async function consumeActivationCode(id: string) { await database().prepare("UPDATE account_activation_tokens SET used_at=? WHERE id=? AND used_at IS NULL").bind(new Date().toISOString(), id).run(); }
-
-export async function setPassword(userId: string, password: string, requireUnset = true) {
+export async function verifyTemporaryPassword(userId: string, password: string) {
   await ensureAccessSeeded();
-  const account = await database().prepare("SELECT password_hash, active FROM user_accounts WHERE user_id = ?").bind(userId).first<{password_hash:string|null;active:number}>();
+  const account = await database().prepare("SELECT password_hash,password_salt,password_iterations,active,status FROM user_accounts WHERE user_id=?").bind(userId).first<{password_hash:string|null;password_salt:string|null;password_iterations:number;active:number;status:string}>();
+  if(!account||!account.active||!["temporary","needs_setup"].includes(account.status))return false;
+  if(account.status==="needs_setup"&&!account.password_hash)return safeEqual(password,TEMPORARY_PASSWORD);
+  if(!account.password_hash||!account.password_salt)return false;
+  return safeEqual(await passwordDigest(password,account.password_salt,account.password_iterations),account.password_hash);
+}
+
+export async function setPassword(userId: string, password: string, requireTemporary = true) {
+  await ensureAccessSeeded();
+  const account = await database().prepare("SELECT status, active FROM user_accounts WHERE user_id = ?").bind(userId).first<{status:string;active:number}>();
   if (!account || !account.active) throw new Error("Akaun tidak aktif.");
-  if (requireUnset && account.password_hash) throw new Error("Password telah ditetapkan. Gunakan fungsi login.");
+  if (requireTemporary && !["temporary","needs_setup"].includes(account.status)) throw new Error("Kata laluan sementara tidak aktif. Hubungi System Admin.");
   const salt = crypto.getRandomValues(new Uint8Array(16)); const saltHex = hex(salt); const hash = await passwordDigest(password, saltHex); const now = new Date().toISOString();
   await database().prepare("UPDATE user_accounts SET password_hash = ?, password_salt = ?, password_iterations = ?, password_set_at = ?, reset_at = NULL, status='ready', updated_at = ? WHERE user_id = ?").bind(hash, saltHex, ITERATIONS, now, now, userId).run();
 }
@@ -55,7 +48,7 @@ export async function setPassword(userId: string, password: string, requireUnset
 export async function verifyPassword(userId: string, password: string) {
   await ensureAccessSeeded();
   const account = await database().prepare("SELECT password_hash, password_salt, password_iterations, active, status FROM user_accounts WHERE user_id = ?").bind(userId).first<{password_hash:string|null;password_salt:string|null;password_iterations:number;active:number;status:string}>();
-  if (!account || !account.active || account.status !== "ready" || !account.password_hash || !account.password_salt) return false;
+  if (!account || !account.active || account.status !== "ready" || !account.password_hash || !account.password_salt || account.password_iterations > ITERATIONS) return false;
   return safeEqual(await passwordDigest(password, account.password_salt, account.password_iterations), account.password_hash);
 }
 
