@@ -16,6 +16,8 @@ export const cases = sqliteTable("cases", {
   initialAction: text("initial_action").notNull().default(""),
   location: text("location").notNull().default(""),
   trafficStatus: text("traffic_status").notNull().default("red"),
+  adminReviewRequested: integer("admin_review_requested").notNull().default(0),
+  adminReviewRequestedAt: text("admin_review_requested_at"),
   status: text("status").notNull().default("disiplin"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull().default(""),
@@ -30,6 +32,9 @@ export const disciplineActions = sqliteTable("discipline_actions", {
   actionType: text("action_type").notNull(),
   otherAction: text("other_action").notNull().default(""),
   details: text("details").notNull().default(""),
+  actionDate: text("action_date").notNull().default(""),
+  actionTime: text("action_time").notNull().default(""),
+  additionalNotes: text("additional_notes").notNull().default(""),
   officerId: text("officer_id").notNull(),
   officerName: text("officer_name").notNull(),
   createdAt: text("created_at").notNull(),
@@ -117,3 +122,47 @@ export const students = sqliteTable("students", {
   classId: text("class_id").notNull().references(() => classes.id),
   active: integer("active").notNull().default(1),
 }, table => [index("idx_students_class_id_name").on(table.classId, table.name)]);
+
+export const userAccounts = sqliteTable("user_accounts", {
+  userId: text("user_id").primaryKey().references(() => teachers.id),
+  passwordHash: text("password_hash"),
+  passwordSalt: text("password_salt"),
+  passwordIterations: integer("password_iterations").notNull().default(210000),
+  passwordSetAt: text("password_set_at"),
+  resetAt: text("reset_at"),
+  active: integer("active").notNull().default(1),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, table => [index("idx_user_accounts_active").on(table.active)]);
+
+export const userRoles = sqliteTable("user_roles", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => teachers.id),
+  role: text("role").notNull(),
+  scopeId: text("scope_id"),
+  position: text("position").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  createdBy: text("created_by").notNull().default("system"),
+}, table => [
+  index("idx_user_roles_user_role").on(table.userId, table.role),
+  index("idx_user_roles_role_scope").on(table.role, table.scopeId),
+]);
+
+export const authSessions = sqliteTable("auth_sessions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => teachers.id),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+  lastSeenAt: text("last_seen_at").notNull(),
+}, table => [index("idx_auth_sessions_token_hash").on(table.tokenHash), index("idx_auth_sessions_user_expires").on(table.userId, table.expiresAt)]);
+
+export const accessAudit = sqliteTable("access_audit", {
+  id: text("id").primaryKey(),
+  userId: text("user_id"),
+  actorName: text("actor_name").notNull(),
+  eventType: text("event_type").notNull(),
+  targetUserId: text("target_user_id"),
+  details: text("details").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+}, table => [index("idx_access_audit_created").on(table.createdAt), index("idx_access_audit_user").on(table.userId)]);

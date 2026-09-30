@@ -1,6 +1,7 @@
 import { addEvent, bucket, database, getCase, toAttachment } from "@/lib/cases-db";
 import { apiJson, apiOptions } from "@/lib/api-response";
 import type { Role } from "@/lib/school";
+import { hasRole, requireUser } from "@/lib/auth";
 
 export const runtime = "edge";
 export function OPTIONS(request: Request) { return apiOptions(request); }
@@ -19,21 +20,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   catch { return apiJson({ error: "Fail gambar tidak dapat dibaca." }, request, { status: 400 }); }
 
   const file = form.get("file");
-  const actorId = String(form.get("actorId") || "");
-  const actor = String(form.get("actor") || "").trim();
-  const role = String(form.get("role") || "Pelapor") as Role;
-  if (!(file instanceof File) || !actorId || !actor) return apiJson({ error: "Gambar dan identiti pelapor diperlukan." }, request, { status: 400 });
+  if (!(file instanceof File)) return apiJson({ error: "Gambar diperlukan." }, request, { status: 400 });
   if (!allowedTypes.has(file.type)) return apiJson({ error: "Format gambar tidak disokong. Gunakan JPG, PNG, WebP, GIF, HEIC atau HEIF." }, request, { status: 415 });
   if (!file.size || file.size > maxImageBytes) return apiJson({ error: "Setiap gambar mestilah tidak melebihi 12 MB." }, request, { status: 413 });
 
   try {
-    const [teacher, current] = await Promise.all([
-      database().prepare("SELECT id, name FROM teachers WHERE id = ? AND active = 1").bind(actorId).first<{ id: string; name: string }>(),
-      getCase(caseId),
-    ]);
-    if (!teacher || teacher.name !== actor) return apiJson({ error: "Identiti pengguna tidak sepadan dengan daftar guru." }, request, { status: 403 });
+    const user = await requireUser(request); const actorId = user.id; const actor = user.name; const role = (hasRole(user, "discipline") ? "Guru Disiplin" : "Pelapor") as Role;
+    const current = await getCase(caseId);
     if (!current) return apiJson({ error: "Kes tidak ditemui." }, request, { status: 404 });
-    if (current.reporterId !== actorId) return apiJson({ error: "Gambar hanya boleh ditambah oleh guru pelapor kes ini." }, request, { status: 403 });
+    if (current.reporterId !== actorId && !hasRole(user, "discipline")) return apiJson({ error: "Gambar hanya boleh ditambah oleh pelapor atau Guru Disiplin." }, request, { status: 403 });
     if (current.deletedAt) return apiJson({ error: "Gambar tidak boleh ditambah pada rekod yang dipadam." }, request, { status: 409 });
 
     const attachmentId = crypto.randomUUID();
@@ -51,6 +46,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const row = await database().prepare("SELECT id, filename, content_type, size, uploaded_by_name, created_at FROM case_attachments WHERE id = ?").bind(attachmentId).first<{ id: string; filename: string; content_type: string; size: number; uploaded_by_name: string; created_at: string }>();
     return apiJson({ attachment: row ? toAttachment(row) : null, record: await getCase(caseId) }, request, { status: 201 });
   } catch (error) {
+    if (error instanceof Response) return apiJson({ error: "Sesi tidak sah." }, request, { status: error.status });
     console.error("Attachment upload failed", error);
     return apiJson({ error: "Gambar belum dapat dimuat naik. Sila cuba lagi." }, request, { status: 503 });
   }

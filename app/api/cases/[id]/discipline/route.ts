@@ -1,14 +1,24 @@
 import { addEvent, database, getCase } from "@/lib/cases-db";
 import { apiJson, apiOptions } from "@/lib/api-response";
-import { hasValidDisciplineCode } from "@/lib/admin-access";
+import { hasRole, requireUser } from "@/lib/auth";
 import { disciplineActionOptions } from "@/lib/school";
 export const runtime = "edge";
 export function OPTIONS(request: Request) { return apiOptions(request); }
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params; let input: Record<string, unknown>; try { input = await request.json(); } catch { return apiJson({ error: "Format tidak sah." }, request, { status: 400 }); }
-  if (!(await hasValidDisciplineCode(request.headers.get("X-Access-Code") || ""))) return apiJson({ error: "Akses Guru Disiplin diperlukan." }, request, { status: 403 });
-  const officerId = String(input.officerId || ""); const officerName = String(input.officerName || "").trim(); const actionType = String(input.actionType || ""); const otherAction = String(input.otherAction || "").trim(); const details = String(input.details || "").trim();
-  if (!disciplineActionOptions.includes(actionType as never) || (actionType === "Lain-lain" && !otherAction) || details.length < 5 || details.length > 2000) return apiJson({ error: "Lengkapkan jenis dan butiran tindakan Guru Disiplin." }, request, { status: 400 });
-  try { const [teacher, record] = await Promise.all([database().prepare("SELECT id, name FROM teachers WHERE id = ? AND active = 1").bind(officerId).first<{id:string;name:string}>(), getCase(id)]); if (!teacher || teacher.name !== officerName) return apiJson({ error: "Identiti Guru Disiplin tidak sah." }, request, { status: 403 }); if (!record || record.deletedAt) return apiJson({ error: "Kes aktif tidak ditemui." }, request, { status: 404 }); const now = new Date().toISOString(); await database().batch([database().prepare("INSERT INTO discipline_actions (id, case_id, action_type, other_action, details, officer_id, officer_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), id, actionType, otherAction, details, officerId, officerName, now), database().prepare("UPDATE cases SET traffic_status = 'yellow', updated_at = ? WHERE id = ?").bind(now, id)]); await addEvent(id, officerId, officerName, "Guru Disiplin", "tindakan_disiplin", `${actionType}${otherAction ? ` — ${otherAction}` : ""}: ${details}`, { trafficStatus: record.trafficStatus }, { trafficStatus: "yellow" }); return apiJson({ record: await getCase(id) }, request); }
-  catch (error) { console.error(error); return apiJson({ error: "Tindakan belum dapat disimpan." }, request, { status: 503 }); }
+  try {
+    const user = await requireUser(request); if (!hasRole(user, "discipline")) return apiJson({ error: "Akses Guru Disiplin diperlukan." }, request, { status: 403 });
+    const mode = String(input.mode || "action"); const record = await getCase(id); if (!record || record.deletedAt) return apiJson({ error: "Kes aktif tidak ditemui." }, request, { status: 404 }); const now = new Date().toISOString();
+    if (mode === "submit_admin") {
+      if (!record.disciplineActions.length) return apiJson({ error: "Rekodkan tindakan awal dahulu." }, request, { status: 409 });
+      await database().prepare("UPDATE cases SET admin_review_requested = 1, admin_review_requested_at = ?, updated_at = ? WHERE id = ?").bind(now, now, id).run();
+      await addEvent(id, user.id, user.name, "Guru Disiplin", "semakan", "Kes dihantar untuk pengesahan / makluman Pentadbir.", { adminReviewRequested: record.adminReviewRequested }, { adminReviewRequested: true });
+    } else {
+      const actionType = String(input.actionType || ""); const otherAction = String(input.otherAction || "").trim(); const details = String(input.details || "").trim(); const actionDate = String(input.actionDate || ""); const actionTime = String(input.actionTime || ""); const additionalNotes = String(input.additionalNotes || "").trim();
+      if (!disciplineActionOptions.includes(actionType as never) || (actionType === "Lain-lain" && !otherAction) || details.length < 5 || details.length > 2000 || !/^\d{4}-\d{2}-\d{2}$/.test(actionDate) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(actionTime) || additionalNotes.length > 1500) return apiJson({ error: "Lengkapkan tarikh, masa, jenis dan butiran tindakan." }, request, { status: 400 });
+      await database().batch([database().prepare("INSERT INTO discipline_actions (id, case_id, action_type, other_action, details, action_date, action_time, additional_notes, officer_id, officer_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), id, actionType, otherAction, details, actionDate, actionTime, additionalNotes, user.id, user.name, now), database().prepare("UPDATE cases SET traffic_status = 'yellow', admin_review_requested = 0, admin_review_requested_at = NULL, updated_at = ? WHERE id = ?").bind(now, id)]);
+      await addEvent(id, user.id, user.name, "Guru Disiplin", "tindakan_disiplin", `${actionType}${otherAction ? ` — ${otherAction}` : ""}: ${details}${additionalNotes ? ` · ${additionalNotes}` : ""}`, { trafficStatus: record.trafficStatus }, { trafficStatus: "yellow", actionDate, actionTime });
+    }
+    return apiJson({ record: await getCase(id) }, request);
+  } catch (error) { if (error instanceof Response) return apiJson({ error: "Sesi tidak sah." }, request, { status: error.status }); console.error(error); return apiJson({ error: "Tindakan belum dapat disimpan." }, request, { status: 503 }); }
 }
