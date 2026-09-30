@@ -59,8 +59,8 @@ export async function getAuthUser(userId: string): Promise<AuthUser | null> {
   return { id: teacher.id, name: teacher.name, position: teacher.position, roles: roles.results.map(r => ({ role: r.role, scopeId: r.scope_id, position: r.position } as UserRoleAssignment)) };
 }
 
-export async function createSession(userId: string) {
-  const token = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`; const hash = await sha256(token); const now = new Date(); const expires = new Date(now.getTime() + SESSION_HOURS * 3600000);
+export async function createSession(userId: string, superAdmin = false) {
+  const token = `${superAdmin ? "sa_" : ""}${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`; const hash = await sha256(token); const now = new Date(); const expires = new Date(now.getTime() + SESSION_HOURS * 3600000);
   await database().prepare("INSERT INTO auth_sessions (id, user_id, token_hash, expires_at, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), userId, hash, expires.toISOString(), now.toISOString(), now.toISOString()).run();
   return { token, expiresAt: expires.toISOString() };
 }
@@ -76,10 +76,11 @@ export async function requireUser(request: Request): Promise<AuthUser> {
   if (!account?.active) throw new Response("Akaun tidak aktif.", { status: 403 });
   const user = await getAuthUser(session.user_id); if (!user) throw new Response("Pengguna tidak ditemui.", { status: 401 });
   database().prepare("UPDATE auth_sessions SET last_seen_at = ? WHERE id = ?").bind(now, session.id).run().catch(() => {});
-  return user;
+  return token.startsWith("sa_") && hasRole(user, "system_admin") ? { ...user, superAdmin: true } : user;
 }
 
 export function hasRole(user: AuthUser, role: AccessRole) { return user.roles.some(r => r.role === role); }
+export function isSuperAdmin(user: AuthUser) { return user.superAdmin === true && hasRole(user, "system_admin"); }
 export function roleScopes(user: AuthUser, role: AccessRole) { return user.roles.filter(r => r.role === role).map(r => r.scopeId).filter(Boolean) as string[]; }
 export async function auditAccess(user: AuthUser | null, eventType: string, details = "", targetUserId: string | null = null) {
   await database().prepare("INSERT INTO access_audit (id, user_id, actor_name, actor_role, event_type, target_user_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), user?.id || null, user?.name || "ANON", user?.roles.map(r=>r.role).join(",")||"", eventType, targetUserId, details, new Date().toISOString()).run();

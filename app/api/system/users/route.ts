@@ -1,5 +1,5 @@
 import { apiJson, apiOptions } from "@/lib/api-response";
-import { auditAccess, hasRole, issueTemporaryPassword, requireUser, TEMPORARY_PASSWORD } from "@/lib/auth";
+import { auditAccess, isSuperAdmin, issueTemporaryPassword, requireUser, TEMPORARY_PASSWORD } from "@/lib/auth";
 import { database } from "@/lib/cases-db";
 import type { AccessRole } from "@/lib/school";
 export const runtime = "edge";
@@ -7,7 +7,7 @@ export function OPTIONS(request: Request) { return apiOptions(request); }
 const allowedRoles = new Set<AccessRole>(["reporter", "class_teacher", "discipline", "school_admin", "system_admin"]);
 
 async function requireSystemAdmin(request: Request) {
-  const user = await requireUser(request); if (!hasRole(user, "system_admin")) throw new Response("Akses System Admin diperlukan.", { status: 403 }); return user;
+  const user = await requireUser(request); if (!isSuperAdmin(user)) throw new Response("Sesi Pentadbir Sistem diperlukan.", { status: 403 }); return user;
 }
 
 export async function GET(request: Request) {
