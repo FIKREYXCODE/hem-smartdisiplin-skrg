@@ -117,12 +117,14 @@ export const teachers = sqliteTable("teachers", {
 
 export const classes = sqliteTable("classes", {
   id: text("id").primaryKey(),
+  academicYear: integer("academic_year").notNull().default(2026),
   year: text("year").notNull(),
   name: text("name").notNull(),
   session: text("session"),
+  classTeacherId: text("class_teacher_id"),
   classTeacher: text("class_teacher").notNull().default(""),
   active: integer("active").notNull().default(1),
-}, table => [index("idx_classes_session_year").on(table.session, table.year)]);
+}, table => [index("idx_classes_session_year").on(table.session, table.year), index("idx_classes_academic_year").on(table.academicYear)]);
 
 export const students = sqliteTable("students", {
   id: text("id").primaryKey(),
@@ -186,3 +188,26 @@ export const accessAudit = sqliteTable("access_audit", {
   details: text("details").notNull().default(""),
   createdAt: text("created_at").notNull(),
 }, table => [index("idx_access_audit_created").on(table.createdAt), index("idx_access_audit_user").on(table.userId)]);
+
+export const disciplineOrganizationYears = sqliteTable("discipline_organization_years", {
+  year: integer("year").primaryKey(),
+  active: integer("active").notNull().default(1),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const disciplineOrganizationMembers = sqliteTable("discipline_organization_members", {
+  id: text("id").primaryKey(),
+  academicYear: integer("academic_year").notNull().references(() => disciplineOrganizationYears.year),
+  teacherId: text("teacher_id").references(() => teachers.id),
+  displayName: text("display_name").notNull(),
+  position: text("position").notNull(),
+  level: text("level").notNull(),
+  session: text("session"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  imageKey: text("image_key"),
+  imageContentType: text("image_content_type"),
+  active: integer("active").notNull().default(1),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, table => [index("idx_discipline_org_year_level").on(table.academicYear, table.level), index("idx_discipline_org_session_order").on(table.academicYear, table.session, table.sortOrder)]);
