@@ -12,6 +12,6 @@ export async function GET(request: Request) {
     const rows = await database().prepare(`SELECT DISTINCT t.id, t.name, t.position, a.password_hash IS NOT NULL AS password_set
       FROM teachers t JOIN user_accounts a ON a.user_id = t.id JOIN user_roles r ON r.user_id = t.id
       WHERE t.active = 1 AND a.active = 1 AND r.role = ? ORDER BY t.name`).bind(category).all<{id:string;name:string;position:string;password_set:number}>();
-    return apiJson({ accounts: rows.results.map(r => ({ id: r.id, name: r.name, position: r.position, passwordSet: !!r.password_set })) }, request);
+    return apiJson({ accounts: rows.results.map(r => ({ id: r.id, name: category === "school_admin" ? r.position : r.name, position: r.position, passwordSet: !!r.password_set })) }, request);
   } catch (error) { console.error(error); return apiJson({ error: "Senarai akaun tidak tersedia." }, request, { status: 503 }); }
 }
