@@ -1,4 +1,4 @@
-const CACHE_NAME = "hem-smartdisiplin-shell-v5";
+const CACHE_NAME = "hem-smartdisiplin-shell-v6";
 const BASE = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const path = value => `${BASE}${value}` || "/";
 const APP_SHELL = [path("/"), path("/manifest.webmanifest"), path("/pwa-icon-192.png"), path("/pwa-icon-512.png"), path("/apple-touch-icon.png"), path("/kpm-cutout.png"), path("/sk-ranggu-cutout.png")];

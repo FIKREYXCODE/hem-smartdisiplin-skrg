@@ -37,7 +37,15 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   let input:Record<string,unknown>;try{input=await request.json();}catch{return apiJson({error:"Format tidak sah."},request,{status:400});}
   try{
-    const admin=await requireSystemAdmin(request);const targetId=String(input.userId||"");const action=String(input.action||"");const target=await database().prepare("SELECT id,name FROM teachers WHERE id=?").bind(targetId).first<{id:string;name:string}>();if(!target)return apiJson({error:"Pengguna tidak ditemui."},request,{status:404});const now=new Date().toISOString();
+    const admin=await requireSystemAdmin(request);const targetId=String(input.userId||"");const action=String(input.action||"");const target=await database().prepare("SELECT id,name,position FROM teachers WHERE id=?").bind(targetId).first<{id:string;name:string;position:string}>();if(!target)return apiJson({error:"Pengguna tidak ditemui."},request,{status:404});const now=new Date().toISOString();
+    if(action==="update_profile"){
+      const name=String(input.name||"").trim().replace(/\s+/g," ").toUpperCase();const position=String(input.position||"").trim().replace(/\s+/g," ");
+      if(name.length<3||name.length>150||position.length<1||position.length>100)return apiJson({error:"Nama atau jawatan tidak sah."},request,{status:400});
+      const duplicate=await database().prepare("SELECT id FROM teachers WHERE UPPER(name)=? AND id<>?").bind(name,targetId).first();if(duplicate)return apiJson({error:"Nama pengguna sudah wujud."},request,{status:409});
+      await database().batch([database().prepare("UPDATE teachers SET name=?,position=? WHERE id=?").bind(name,position,targetId),database().prepare("UPDATE classes SET class_teacher=? WHERE class_teacher=?").bind(name,target.name)]);
+      await auditAccess(admin,"user_profile_updated",JSON.stringify({before:{name:target.name,position:target.position},after:{name,position}}),targetId);
+      return apiJson({ok:true},request);
+    }
     if(action==="reset_password"||action==="generate_activation"){const activation=await issueActivationCode(targetId,admin.id);await auditAccess(admin,action==="reset_password"?"password_reset":"activation_generated",`Kod sementara ${target.name} dijana; tamat ${activation.expiresAt}.`,targetId);return apiJson({ok:true,activationCode:activation.code,expiresAt:activation.expiresAt,message:"Akses telah direset. Pengguna perlu mencipta password baharu pada login seterusnya."},request);}
     if(action==="set_active"){
       const active=input.active?1:0;
