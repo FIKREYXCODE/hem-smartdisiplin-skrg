@@ -5,7 +5,7 @@ Sistem pengisian, semakan dan analisis rekod salah laku murid untuk Sekolah Keba
 ## Ciri utama
 
 - Pengisian laporan berasaskan daftar guru, kelas dan murid rasmi.
-- Sidang pagi untuk Tahun 1–3 dan sidang petang untuk Tahun 4–6.
+- Sidang pagi untuk Tahun 4–6 dan sidang petang untuk Tahun 1–3.
 - Paparan guru kelas bagi setiap kelas.
 - Aliran Guru Disiplin → PK HEM → Guru Besar.
 - Jejak audit kekal untuk cipta, kemas kini, semakan, penghapusan lembut dan pemulihan.
