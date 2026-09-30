@@ -7,9 +7,10 @@ export function OPTIONS(request: Request) { return apiOptions(request); }
 export async function GET(request: Request) {
   try {
     await requireUser(request);
+    const currentYear = new Date().getFullYear();
     const [teacherResult, classResult, studentResult] = await Promise.all([
       database().prepare("SELECT id, name, position, role FROM teachers WHERE active = 1 ORDER BY name").all<{ id: string; name: string; position: string; role: string }>(),
-      database().prepare("SELECT id, year, name, session, class_teacher FROM classes WHERE active = 1 ORDER BY CAST(year AS INTEGER), name").all<{ id: string; year: string; name: string; session: string; class_teacher: string }>(),
+      database().prepare("SELECT id, year, name, session, class_teacher FROM classes WHERE active = 1 AND academic_year = COALESCE((SELECT MAX(academic_year) FROM classes WHERE academic_year <= ?), 2026) ORDER BY CAST(year AS INTEGER), name").bind(currentYear).all<{ id: string; year: string; name: string; session: string; class_teacher: string }>(),
       database().prepare("SELECT id, name, class_id FROM students WHERE active = 1 ORDER BY name").all<{ id: string; name: string; class_id: string }>(),
     ]);
     const studentsByClass = new Map<string, { id: string; name: string }[]>(); for (const student of studentResult.results) studentsByClass.set(student.class_id, [...(studentsByClass.get(student.class_id) || []), { id: student.id, name: student.name }]);
