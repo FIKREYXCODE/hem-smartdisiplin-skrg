@@ -5,7 +5,7 @@ export const runtime = "edge";
 export function OPTIONS(request: Request) { return apiOptions(request); }
 export async function GET(request: Request) {
   const category = new URL(request.url).searchParams.get("category") || "reporter";
-  const allowed = new Set(["reporter", "class_teacher", "discipline", "school_admin", "system_admin"]);
+  const allowed = new Set(["reporter", "class_teacher", "discipline", "school_admin"]);
   if (!allowed.has(category)) return apiJson({ error: "Kategori akses tidak sah." }, request, { status: 400 });
   try {
     await ensureAccessSeeded();
