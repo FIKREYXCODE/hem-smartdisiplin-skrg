@@ -17,7 +17,7 @@ type ClassRow = {
   class_teacher_id: string | null; class_teacher: string; active: number;
 };
 
-const levels = new Set(["guru_besar", "pk_hem", "setiausaha", "sidang"]);
+const levels = new Set(["guru_besar", "pk_hem", "setiausaha", "penyelaras", "sidang"]);
 const sessions = new Set(["Pagi", "Petang"]);
 
 function numberYear(value: unknown, fallback = 2026) {
@@ -27,7 +27,7 @@ function numberYear(value: unknown, fallback = 2026) {
 
 async function payload(year: number) {
   const [memberResult, classResult, teacherResult, yearResult] = await Promise.all([
-    database().prepare("SELECT id, academic_year, teacher_id, display_name, position, level, session, sort_order, image_key, active FROM discipline_organization_members WHERE academic_year = ? ORDER BY CASE level WHEN 'guru_besar' THEN 1 WHEN 'pk_hem' THEN 2 WHEN 'setiausaha' THEN 3 ELSE 4 END, session, sort_order, display_name").bind(year).all<MemberRow>(),
+    database().prepare("SELECT id, academic_year, teacher_id, display_name, position, level, session, sort_order, image_key, active FROM discipline_organization_members WHERE academic_year = ? ORDER BY CASE level WHEN 'guru_besar' THEN 1 WHEN 'pk_hem' THEN 2 WHEN 'setiausaha' THEN 3 WHEN 'penyelaras' THEN 4 ELSE 5 END, session, sort_order, display_name").bind(year).all<MemberRow>(),
     database().prepare("SELECT id, academic_year, year, name, session, class_teacher_id, class_teacher, active FROM classes WHERE academic_year = ? ORDER BY CAST(year AS INTEGER), name").bind(year).all<ClassRow>(),
     database().prepare("SELECT id, name, position FROM teachers WHERE active = 1 ORDER BY name").all<{ id: string; name: string; position: string }>(),
     database().prepare("SELECT year, active FROM discipline_organization_years ORDER BY year DESC").all<{ year: number; active: number }>(),

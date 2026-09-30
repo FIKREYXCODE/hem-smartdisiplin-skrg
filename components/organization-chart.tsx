@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 
 type OrgMember = {
   id: string; academicYear: number; teacherId: string | null; displayName: string; position: string;
-  level: "guru_besar" | "pk_hem" | "setiausaha" | "sidang"; session: "Pagi" | "Petang" | null;
+  level: "guru_besar" | "pk_hem" | "setiausaha" | "penyelaras" | "sidang"; session: "Pagi" | "Petang" | null;
   sortOrder: number; active: boolean; hasPhoto: boolean;
 };
 type OrgClass = { id: string; academicYear: number; year: string; name: string; session: "Pagi" | "Petang"; classTeacherId: string | null; classTeacher: string; active: boolean };
@@ -16,7 +16,7 @@ type OrgPayload = { year: number; years: { year: number; active: boolean }[]; me
 
 const backend = "https://hem-smartdisiplin-ranggu.afiqzkablemo.chatgpt.site";
 const endpoint = (path: string) => `${typeof window !== "undefined" && window.location.hostname === "fikreyxcode.github.io" ? backend : ""}${path}`;
-const levelLabels: Record<OrgMember["level"], string> = { guru_besar: "Guru Besar", pk_hem: "Penolong Kanan Hal Ehwal Murid", setiausaha: "Setiausaha Disiplin", sidang: "Pegawai Sidang" };
+const levelLabels: Record<OrgMember["level"], string> = { guru_besar: "Guru Besar", pk_hem: "Penolong Kanan Hal Ehwal Murid", setiausaha: "Setiausaha Disiplin", penyelaras: "Penyelaras Disiplin", sidang: "Pegawai Sidang" };
 
 async function squareCrop(file: File) {
   try {
@@ -80,7 +80,7 @@ export function OrganizationChart({ adminEnabled, token, onRosterReload, notify 
   }
 
   const activeMembers = (data?.members || []).filter(member => member.active);
-  const top = (["guru_besar", "pk_hem", "setiausaha"] as OrgMember["level"][]).map(level => activeMembers.find(member => member.level === level)).filter(Boolean) as OrgMember[];
+  const top = (["guru_besar", "pk_hem", "setiausaha", "penyelaras"] as OrgMember["level"][]).map(level => activeMembers.find(member => member.level === level)).filter(Boolean) as OrgMember[];
   const yearOptions = useMemo(() => {
     const values = new Set((data?.years || []).map(item => item.year)); values.add(initialYear);
     return [...values].sort((a, b) => b - a);
