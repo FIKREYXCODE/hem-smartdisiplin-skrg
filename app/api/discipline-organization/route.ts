@@ -1,6 +1,7 @@
 import { apiJson, apiOptions } from "@/lib/api-response";
 import { auditAccess, isSuperAdmin, requireUser } from "@/lib/auth";
 import { bucket, database } from "@/lib/cases-db";
+import { positionTitle } from "@/lib/position-title";
 import { sessionForYear } from "@/lib/school";
 
 export const runtime = "edge";
@@ -39,7 +40,7 @@ async function payload(requestedYear: number, admin = false) {
     years: yearResult.results.map(item => ({ year: item.year, active: Boolean(item.active) })),
     members: memberResult.results.map(item => ({
       id: item.id, academicYear: item.academic_year, teacherId: item.teacher_id,
-      displayName: item.display_name, position: item.position, unit: item.unit,
+      displayName: item.display_name, position: positionTitle(item.position), unit: item.unit,
       roleLabel: item.role_label, hierarchyLevel: item.hierarchy_level, level: item.level,
       session: item.session, sortOrder: item.sort_order, active: Boolean(item.active),
       hasPhoto: Boolean(item.image_key),
@@ -49,7 +50,7 @@ async function payload(requestedYear: number, admin = false) {
       session: item.session || sessionForYear(item.year), classTeacherId: item.class_teacher_id,
       classTeacher: item.class_teacher, active: Boolean(item.active),
     })),
-    teachers: teacherResult.results,
+    teachers: teacherResult.results.map(item => ({ ...item, position: positionTitle(item.position) })),
   };
 }
 
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     if (action === "saveMember") {
       const id = String(input.id || crypto.randomUUID());
       const displayName = String(input.displayName || "").trim().slice(0, 160);
-      const position = String(input.position || "").trim().slice(0, 160);
+      const position = positionTitle(input.position).slice(0, 160);
       const unit = String(input.unit || "").trim().slice(0, 160);
       const roleLabel = String(input.roleLabel || "").trim().slice(0, 160);
       const hierarchyLevel = Math.max(1, Math.min(5, Number(input.hierarchyLevel) || 4));
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
         database().prepare("SELECT year, name, session, class_teacher_id, class_teacher, active FROM classes WHERE academic_year = ?").bind(sourceYear).all<Omit<ClassRow, "id" | "academic_year">>(),
       ]);
       const statements = [database().prepare("UPDATE discipline_organization_years SET active = 0, updated_at = ?").bind(now), database().prepare("INSERT INTO discipline_organization_years (year, active, created_at, updated_at) VALUES (?, 1, ?, ?)").bind(year, now, now)];
-      for (const item of members.results) statements.push(database().prepare("INSERT INTO discipline_organization_members (id, academic_year, teacher_id, display_name, position, unit, role_label, hierarchy_level, level, session, sort_order, image_key, image_content_type, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), year, item.teacher_id, item.display_name, item.position, item.unit, item.role_label, item.hierarchy_level, item.level, item.session, item.sort_order, item.image_key, item.image_content_type, item.active, now, now));
+      for (const item of members.results) statements.push(database().prepare("INSERT INTO discipline_organization_members (id, academic_year, teacher_id, display_name, position, unit, role_label, hierarchy_level, level, session, sort_order, image_key, image_content_type, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), year, item.teacher_id, item.display_name, positionTitle(item.position), item.unit, item.role_label, item.hierarchy_level, item.level, item.session, item.sort_order, item.image_key, item.image_content_type, item.active, now, now));
       for (const item of classes.results) statements.push(database().prepare("INSERT INTO classes (id, academic_year, year, name, session, class_teacher_id, class_teacher, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), year, item.year, item.name, item.session, item.class_teacher_id, item.class_teacher, item.active));
       await database().batch(statements);
     } else if (action === "saveClass") {
