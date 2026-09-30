@@ -1,16 +1,16 @@
 import { database } from "./cases-db";
 import type { AccessRole } from "./school";
 
-const SEED_VERSION = "access_seed_v2";
+const SEED_VERSION = "access_seed_v3";
 const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 const classTeacherMap: Record<string, string> = {
-  "4 JAYYID": "NOZE BINTI TUKIJAN", "4 KHOIR": "MASTURAH BINTI TUDA", "4 MUMTAZ": "NURUL ANISA BINTI SAPARUDIN", "4 ILTIZAM": "ROSIDIAN BIN IDRIS",
-  "5 JAYYID": "RINI BINTI DAUD", "5 KHOIR": "TAN JANG BIN TURE", "5 MUMTAZ": "HAMSIAH BINTI HAMID", "5 ILTIZAM": "WAN MUHAMAD YUSUF BIN WAN ABDUL AZIZ",
-  "6 JAYYID": "MASNIYA BINTI ABDULLAH SANI", "6 KHOIR": "MOHD ALFAIZAL BIN DAUD", "6 MUMTAZ": "BAJAM BINTI LADUNG", "6 ILTIZAM": "AG KU KEMAINDDRA BIN PG MOHD TAIB",
-  "1 JAYYID": "NORLINA BINTI BAGWAS", "1 KHOIR": "FARIDAH BINTI SUNU", "1 MUMTAZ": "RASMAWATI BINTI TAUSE", "1 ILTIZAM": "WAFA FARHANA BINTI ABD KADIR",
-  "2 JAYYID": "MARINI BINTI LADI", "2 KHOIR": "S.LILI BINTI LADI", "2 MUMTAZ": "SITI JAWARA BINTI LUKMAN", "2 ILTIZAM": "MOHAMMAD IKHWAN BIN ABDURAIS",
-  "3 JAYYID": "AINATUN NADHIRAH BINTI DHARMAWI", "3 KHOIR": "JAIBY BIN JULIAN", "3 MUMTAZ": "NUR FAEZAH BINTI BANTALANI", "3 ILTIZAM": "JAINAH BINTI SULAIMAN",
+  "4-jayyid": "NOZE BINTI TUKIJAN", "4-khoir": "MASTURAH BINTI TUDA", "4-mumtaz": "NURUL ANISA BINTI SAPARUDIN", "4-iltizam": "ROSIDIAN BIN IDRIS",
+  "5-jayyid": "RINI BINTI DAUD", "5-khoir": "TAN JANG BIN TURE", "5-mumtaz": "HAMSIAH BINTI HAMID", "5-iltizam": "WAN MUHAMAD YUSUF BIN WAN ABDUL AZIZ",
+  "6-jayyid": "MASNIYA BINTI ABDULLAH SANI", "6-khoir": "MOHD ALFAIZAL BIN DAUD", "6-mumtaz": "BAJAM BINTI LADUNG", "6-iltizam": "AG KU KEMAINDDRA BIN PG MOHD TAIB",
+  "1-jayyid": "NORLINA BINTI BAGWAS", "1-khoir": "FARIDAH BINTI SUNU", "1-mumtaz": "RASMAWATI BINTI TAUSE", "1-iltizam": "WAFA FARHANA BINTI ABD KADIR",
+  "2-jayyid": "MARINI BINTI LADI", "2-khoir": "S.LILI BINTI LADI", "2-mumtaz": "SITI JAWARA BINTI LUKMAN", "2-iltizam": "MOHAMMAD IKHWAN BIN ABDURAIS",
+  "3-jayyid": "AINATUN NADHIRAH BINTI DHARMAWI", "3-khoir": "JAIBY BIN JULIAN", "3-mumtaz": "NUR FAEZAH BINTI BANTALANI", "3-iltizam": "JAINAH BINTI SULAIMAN",
 };
 
 const disciplineNames = ["NOZE BINTI TUKIJAN", "MOHD ALFAIZAL BIN DAUD", "ZAMRIE BIN OMAR ALI"];
@@ -24,7 +24,7 @@ const adminNames: Record<string, string> = {
 const systemAdminNames = ["MOHAMMAD FIKREY BIN ABDUL GAPAR"];
 
 type TeacherRow = { id: string; name: string; position: string };
-type ClassRow = { id: string; name: string };
+type ClassRow = { id: string; name: string; year: string };
 
 export async function ensureAccessSeeded() {
   const seeded = await database().prepare("SELECT id FROM access_audit WHERE event_type = ? LIMIT 1").bind(SEED_VERSION).first();
@@ -32,7 +32,7 @@ export async function ensureAccessSeeded() {
   const now = new Date().toISOString();
   const [teacherResult, classResult] = await Promise.all([
     database().prepare("SELECT id, name, position FROM teachers").all<TeacherRow>(),
-    database().prepare("SELECT id, name FROM classes WHERE active = 1").all<ClassRow>(),
+    database().prepare("SELECT id, name, year FROM classes WHERE active = 1").all<ClassRow>(),
   ]);
   const teachers = [...teacherResult.results];
   if (!teachers.some(t => normalize(t.name) === normalize("MASNIYA BINTI ABDULLAH SANI"))) {
@@ -51,8 +51,11 @@ export async function ensureAccessSeeded() {
     statements.push(database().prepare("INSERT OR IGNORE INTO user_accounts (user_id, password_iterations, active, created_at, updated_at) VALUES (?, 210000, 1, ?, ?)").bind(teacher.id, now, now));
     addRole(teacher, "reporter");
   }
-  for (const [className, teacherName] of Object.entries(classTeacherMap)) {
-    const cls = classResult.results.find(c => normalize(c.name) === normalize(className));
+  for (const cls of classResult.results) {
+    statements.push(database().prepare("UPDATE classes SET session = ? WHERE id = ?").bind(["4", "5", "6"].includes(cls.year) ? "Pagi" : "Petang", cls.id));
+  }
+  for (const [classId, teacherName] of Object.entries(classTeacherMap)) {
+    const cls = classResult.results.find(c => c.id === classId);
     const teacher = byName.get(normalize(teacherName));
     if (cls && teacher) {
       addRole(teacher, "class_teacher", cls.id, "Guru Kelas");
