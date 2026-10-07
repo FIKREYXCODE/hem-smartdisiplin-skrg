@@ -76,3 +76,20 @@ export async function PATCH(request: Request) {
     return apiJson({error:"Modul tidak sah."},request,{status:400});
   }catch(error){return error instanceof Response?error:apiJson({error:"Kemas kini gagal."},request,{status:500});}
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const user=await requireUser(request);
+    if(!user.superAdmin)return apiJson({error:"Hanya System Admin boleh memadam rekod HEM."},request,{status:403});
+    const body=await request.json() as Record<string,unknown>;const feature=String(body.module||"");const id=String(body.id||"");
+    if(!id)return apiJson({error:"ID rekod diperlukan."},request,{status:400});
+    if(feature==="late"){
+      const row=await database().prepare("SELECT * FROM late_records WHERE id=?").bind(id).first<LateRow>();
+      if(!row)return apiJson({error:"Rekod lewat tidak ditemui."},request,{status:404});
+      await database().prepare("DELETE FROM late_records WHERE id=?").bind(id).run();
+      await auditAccess(user,"late_record_deleted",`${row.student_name} · ${row.date} ${row.time}`);
+      return apiJson({ok:true},request);
+    }
+    return apiJson({error:"Modul tidak sah."},request,{status:400});
+  } catch(error){return error instanceof Response?error:apiJson({error:"Rekod gagal dipadam."},request,{status:500});}
+}

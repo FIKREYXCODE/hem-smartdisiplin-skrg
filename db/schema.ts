@@ -206,6 +206,14 @@ export const accessAudit = sqliteTable("access_audit", {
   createdAt: text("created_at").notNull(),
 }, table => [index("idx_access_audit_created").on(table.createdAt), index("idx_access_audit_user").on(table.userId)]);
 
+export const siteBranding = sqliteTable("site_branding", {
+  id: text("id").primaryKey(),
+  headerImageKey: text("header_image_key"),
+  headerImageContentType: text("header_image_content_type"),
+  updatedBy: text("updated_by"),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const disciplineOrganizationYears = sqliteTable("discipline_organization_years", {
   year: integer("year").primaryKey(),
   active: integer("active").notNull().default(1),
