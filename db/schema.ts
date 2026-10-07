@@ -231,3 +231,48 @@ export const disciplineOrganizationMembers = sqliteTable("discipline_organizatio
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 }, table => [index("idx_discipline_org_year_level").on(table.academicYear, table.level), index("idx_discipline_org_hierarchy_order").on(table.academicYear, table.hierarchyLevel, table.sortOrder), index("idx_discipline_org_session_order").on(table.academicYear, table.session, table.sortOrder)]);
+
+export const lateRecords = sqliteTable("late_records", {
+  id: text("id").primaryKey(),
+  studentId: text("student_id").notNull().references(() => students.id),
+  studentName: text("student_name").notNull(),
+  classId: text("class_id").notNull().references(() => classes.id),
+  className: text("class_name").notNull(),
+  date: text("date").notNull(),
+  time: text("time").notNull(),
+  reason: text("reason").notNull(),
+  notes: text("notes").notNull().default(""),
+  dutyTeacherId: text("duty_teacher_id").notNull(),
+  dutyTeacherName: text("duty_teacher_name").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, table => [
+  index("idx_late_records_date").on(table.date),
+  index("idx_late_records_student").on(table.studentId, table.date),
+  index("idx_late_records_class").on(table.classId, table.date),
+]);
+
+export const hemPrograms = sqliteTable("hem_programs", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  unit: text("unit").notNull(),
+  date: text("date").notNull(),
+  startTime: text("start_time").notNull().default(""),
+  endTime: text("end_time").notNull().default(""),
+  location: text("location").notNull(),
+  coordinatorId: text("coordinator_id").notNull(),
+  coordinatorName: text("coordinator_name").notNull(),
+  targetGroup: text("target_group").notNull().default(""),
+  participantCount: integer("participant_count").notNull().default(0),
+  objective: text("objective").notNull().default(""),
+  activities: text("activities").notNull().default(""),
+  impact: text("impact").notNull().default(""),
+  summary: text("summary").notNull().default(""),
+  status: text("status").notNull().default("planned"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, table => [
+  index("idx_hem_programs_date").on(table.date),
+  index("idx_hem_programs_unit").on(table.unit, table.date),
+  index("idx_hem_programs_status").on(table.status),
+]);
