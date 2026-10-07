@@ -14,7 +14,8 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern pages-dist",
     "db:generate": "drizzle-kit generate",
     "test:participants": "node --experimental-strip-types scripts/test-participants.mjs",
-    "test:class-monitoring": "node --experimental-strip-types scripts/test-class-monitoring.mjs"
+    "test:class-monitoring": "node --experimental-strip-types scripts/test-class-monitoring.mjs",
+    "test:print": "node scripts/test-print-layout.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
