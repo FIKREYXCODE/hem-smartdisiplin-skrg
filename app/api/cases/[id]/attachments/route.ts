@@ -12,6 +12,7 @@ const extensions: Record<string, string> = {
   "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
   "image/gif": "gif", "image/heic": "heic", "image/heif": "heif",
 };
+const filenameTypes: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif", heic: "image/heic", heif: "image/heif" };
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: caseId } = await params;
@@ -21,7 +22,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const file = form.get("file");
   if (!(file instanceof File)) return apiJson({ error: "Gambar diperlukan." }, request, { status: 400 });
-  if (!allowedTypes.has(file.type)) return apiJson({ error: "Format gambar tidak disokong. Gunakan JPG, PNG, WebP, GIF, HEIC atau HEIF." }, request, { status: 415 });
+  const filenameExtension = file.name.split(".").pop()?.toLowerCase() || "";
+  const contentType = allowedTypes.has(file.type) ? file.type : filenameTypes[filenameExtension];
+  if (!contentType) return apiJson({ error: "Format gambar tidak disokong. Gunakan JPG, PNG, WebP, GIF, HEIC atau HEIF." }, request, { status: 415 });
   if (!file.size || file.size > maxImageBytes) return apiJson({ error: "Setiap gambar mestilah tidak melebihi 12 MB." }, request, { status: 413 });
 
   try {
@@ -32,12 +35,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (current.deletedAt) return apiJson({ error: "Gambar tidak boleh ditambah pada rekod yang dipadam." }, request, { status: 409 });
 
     const attachmentId = crypto.randomUUID();
-    const objectKey = `cases/${caseId}/${attachmentId}.${extensions[file.type]}`;
+    const objectKey = `cases/${caseId}/${attachmentId}.${extensions[contentType]}`;
     const now = new Date().toISOString();
-    await bucket().put(objectKey, file.stream(), { httpMetadata: { contentType: file.type } });
+    await bucket().put(objectKey, file.stream(), { httpMetadata: { contentType } });
     try {
       await database().prepare("INSERT INTO case_attachments (id, case_id, object_key, filename, content_type, size, uploaded_by_id, uploaded_by_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .bind(attachmentId, caseId, objectKey, file.name.slice(0, 240) || `gambar.${extensions[file.type]}`, file.type, file.size, actorId, actor, now).run();
+        .bind(attachmentId, caseId, objectKey, file.name.slice(0, 240) || `gambar.${extensions[contentType]}`, contentType, file.size, actorId, actor, now).run();
     } catch (error) {
       await bucket().delete(objectKey);
       throw error;

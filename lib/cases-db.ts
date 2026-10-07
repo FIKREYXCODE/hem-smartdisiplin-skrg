@@ -9,6 +9,19 @@ type ConfirmationRow = { id: string; decision: AdminConfirmation["decision"]; ad
 type SsdmRow = { id: string; pupil_parent_feedback: string; pupil_feedback: string; parent_feedback: string; recommendation: string; other_recommendation: string; extra_notes: string; status: SsdmRequest["status"]; requested_by_id: string; requested_by_name: string; requested_at: string; decided_by_id: string | null; decided_by_name: string | null; decided_by_position: string | null; decided_at: string | null; admin_notes: string; recorded_at:string|null; recorded_by_id:string|null; recorded_by_name:string|null };
 type ParticipantRow = { id: string; student_id: string | null; student_name: string; class_id: string; class_name: string };
 
+function decodeDisciplineNotes(value: string) {
+  const fallback = { additionalNotes: value || "", witnessDetails: "", investigationDetails: "" };
+  if (!value?.startsWith("[[DISCIPLINE_DETAIL_V1]]")) return fallback;
+  try {
+    const parsed = JSON.parse(value.slice("[[DISCIPLINE_DETAIL_V1]]".length)) as Record<string, unknown>;
+    return {
+      additionalNotes: String(parsed.additionalNotes || ""),
+      witnessDetails: String(parsed.witnessDetails || ""),
+      investigationDetails: String(parsed.investigationDetails || ""),
+    };
+  } catch { return fallback; }
+}
+
 export function database() { if (!env.DB) throw new Error("D1 DB binding unavailable"); return env.DB; }
 export function bucket() { if (!env.BUCKET) throw new Error("R2 BUCKET binding unavailable"); return env.BUCKET; }
 export function toEvent(row: EventRow): AuditEvent { return { id: row.id, actorName: row.actor_name, actorRole: row.actor_role as Role, eventType: row.event_type, action: row.action, createdAt: row.created_at, beforeData: row.before_data, afterData: row.after_data }; }
@@ -22,7 +35,7 @@ export async function toRecord(row: CaseRow): Promise<CaseRecord> {
     database().prepare("SELECT * FROM ssdm_requests WHERE case_id = ? ORDER BY requested_at DESC LIMIT 1").bind(row.id).first<SsdmRow>(),
     database().prepare("SELECT id, student_id, student_name, class_id, class_name FROM case_participants WHERE case_id = ? ORDER BY created_at ASC").bind(row.id).all<ParticipantRow>(),
   ]);
-  const actions: DisciplineAction[] = actionRows.results.map(a => { let actionTypes:string[]=[];try{actionTypes=JSON.parse(a.action_types||"[]");}catch{}if(!actionTypes.length&&a.action_type)actionTypes=[a.action_type];return { id: a.id, actionType: a.action_type, actionTypes, otherAction: a.other_action, details: a.details, actionDate: a.action_date || a.created_at.slice(0, 10), actionTime: a.action_time || a.created_at.slice(11, 16), additionalNotes: a.additional_notes || "", pupilFeedback:a.pupil_feedback||"",parentFeedback:a.parent_feedback||"",officerId: a.officer_id, officerName: a.officer_name, createdAt: a.created_at };});
+  const actions: DisciplineAction[] = actionRows.results.map(a => { let actionTypes:string[]=[];try{actionTypes=JSON.parse(a.action_types||"[]");}catch{}if(!actionTypes.length&&a.action_type)actionTypes=[a.action_type];const notes=decodeDisciplineNotes(a.additional_notes);return { id: a.id, actionType: a.action_type, actionTypes, otherAction: a.other_action, details: a.details, actionDate: a.action_date || a.created_at.slice(0, 10), actionTime: a.action_time || a.created_at.slice(11, 16), ...notes, pupilFeedback:a.pupil_feedback||"",parentFeedback:a.parent_feedback||"",officerId: a.officer_id, officerName: a.officer_name, createdAt: a.created_at };});
   const confirmations: AdminConfirmation[] = confirmationRows.results.map(a => ({ id: a.id, decision: a.decision, adminId: a.admin_id, adminName: a.admin_name, position: a.position, notes: a.notes, createdAt: a.created_at }));
   const ssdmRequest: SsdmRequest | null = ssdmRow ? { id: ssdmRow.id, pupilParentFeedback: ssdmRow.pupil_parent_feedback, pupilFeedback:ssdmRow.pupil_feedback||"",parentFeedback:ssdmRow.parent_feedback||ssdmRow.pupil_parent_feedback||"",recommendation: ssdmRow.recommendation, otherRecommendation: ssdmRow.other_recommendation, extraNotes: ssdmRow.extra_notes, status: ssdmRow.status, requestedById: ssdmRow.requested_by_id, requestedByName: ssdmRow.requested_by_name, requestedAt: ssdmRow.requested_at, decidedById: ssdmRow.decided_by_id, decidedByName: ssdmRow.decided_by_name, decidedByPosition: ssdmRow.decided_by_position, decidedAt: ssdmRow.decided_at, adminNotes: ssdmRow.admin_notes,recordedAt:ssdmRow.recorded_at,recordedById:ssdmRow.recorded_by_id,recordedByName:ssdmRow.recorded_by_name } : null;
   const participants: CaseParticipant[] = participantRows.results.length

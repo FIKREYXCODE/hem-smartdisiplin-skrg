@@ -59,7 +59,7 @@ export type CaseAttachment = {
   id: string; filename: string; contentType: string; size: number;
   uploadedByName: string; createdAt: string;
 };
-export type DisciplineAction = { id: string; actionType: string; actionTypes: string[]; otherAction: string; details: string; actionDate: string; actionTime: string; additionalNotes: string; pupilFeedback: string; parentFeedback: string; officerId: string; officerName: string; createdAt: string };
+export type DisciplineAction = { id: string; actionType: string; actionTypes: string[]; otherAction: string; details: string; actionDate: string; actionTime: string; additionalNotes: string; witnessDetails: string; investigationDetails: string; pupilFeedback: string; parentFeedback: string; officerId: string; officerName: string; createdAt: string };
 export type AdminConfirmation = { id: string; decision: "acknowledged" | "further_action"; adminId: string; adminName: string; position: string; notes: string; createdAt: string };
 export type SsdmRequest = { id: string; pupilParentFeedback: string; pupilFeedback: string; parentFeedback: string; recommendation: string; otherRecommendation: string; extraNotes: string; status: "pending" | "approved" | "rejected" | "returned" | "needs_further_action" | "recorded"; requestedById: string; requestedByName: string; requestedAt: string; decidedById?: string | null; decidedByName?: string | null; decidedByPosition?: string | null; decidedAt?: string | null; adminNotes: string; recordedAt?: string | null; recordedById?: string | null; recordedByName?: string | null };
 export type Teacher = { id: string; name: string; position: string; role: Role };
