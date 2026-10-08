@@ -12,10 +12,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     const user = await requireUser(request);
     const attachment = await database().prepare("SELECT case_id, object_key, filename, content_type FROM case_attachments WHERE id = ?").bind(id).first<{ case_id:string; object_key: string; filename: string; content_type: string }>();
-    if (!attachment) return apiJson({ error: "Gambar tidak ditemui." }, request, { status: 404 });
-    const record = await getCase(attachment.case_id); if (!record || !canViewCase(user, record, request)) return apiJson({ error: "Akses gambar ditolak." }, request, { status: 403 });
+    if (!attachment) return apiJson({ error: "Lampiran tidak ditemui." }, request, { status: 404 });
+    const record = await getCase(attachment.case_id); if (!record || !canViewCase(user, record, request)) return apiJson({ error: "Akses lampiran ditolak." }, request, { status: 403 });
     const object = await bucket().get(attachment.object_key);
-    if (!object) return apiJson({ error: "Fail gambar tidak ditemui." }, request, { status: 404 });
+    if (!object) return apiJson({ error: "Fail lampiran tidak ditemui." }, request, { status: 404 });
     const safeFilename = attachment.filename.replace(/["\r\n]/g, "_");
     return new Response(object.body, { headers: {
       ...corsHeaders(request),
@@ -28,6 +28,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   } catch (error) {
     if (error instanceof Response) return apiJson({ error: "Sesi tidak sah." }, request, { status: error.status });
     console.error("Attachment load failed", error);
-    return apiJson({ error: "Gambar tidak tersedia sekarang." }, request, { status: 503 });
+    return apiJson({ error: "Lampiran tidak tersedia sekarang." }, request, { status: 503 });
   }
 }
