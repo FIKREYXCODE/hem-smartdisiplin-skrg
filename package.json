@@ -14,6 +14,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern pages-dist",
     "db:generate": "drizzle-kit generate",
     "test:participants": "node --experimental-strip-types scripts/test-participants.mjs",
+    "test:report-submission": "node --experimental-strip-types scripts/test-report-submission.mjs",
     "test:class-monitoring": "node --experimental-strip-types scripts/test-class-monitoring.mjs",
     "test:print": "node scripts/test-print-layout.mjs",
     "test:roles": "node scripts/test-role-workspaces.mjs"
