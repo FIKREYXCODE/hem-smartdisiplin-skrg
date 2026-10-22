@@ -17,6 +17,11 @@ assert.match(page, /Menunggu pengesahan Pentadbir Sekolah/, "Penerima pengesahan
 assert.match(page, /Jejak audit disembunyikan/, "Dashboard System Admin tidak boleh memaparkan aktiviti audit secara automatik.");
 assert.match(page, /Paparkan audit/, "System Admin mesti boleh meminta paparan audit apabila diperlukan.");
 assert.match(page, /Paparkan jejak audit apabila diperlukan/, "Jejak audit setiap kes mesti tersembunyi sehingga diminta.");
+assert.match(page, /p\.user\.superAdmin&&<section className="case-audit-disclosure"/, "Jejak audit butiran kes mesti terhad kepada Pentadbir Sistem.");
+assert.doesNotMatch(page, /<h3>Jejak audit<\/h3><ol className="timeline">/, "Jejak audit tidak boleh muncul secara automatik di bawah butiran kes.");
+assert.match(page, /<details className="action-picker">/, "Jenis tindakan Guru Disiplin mesti menggunakan senarai pilihan yang boleh dibuka dan ditatal.");
+assert.match(page, /Maklum balas dan catatan tambahan/, "Medan tindakan pilihan mesti diringkaskan dalam bahagian boleh buka.");
+assert.match(page, /className="review-box workflow-disclosure"/, "Permohonan SSDM mesti diringkaskan supaya halaman tindakan tidak terlalu panjang.");
 assert.doesNotMatch(page, /Promise\.all\(\[loadSystem\(sessionToken\),loadActivity\(sessionToken\)\]\)/, "Audit tidak boleh dimuat secara automatik ketika login.");
 assert.match(page, /className="case-status-button" onClick=\{\(\)=>onOpen\(r\)\}/, "Status setiap kes mesti boleh membuka ruang respons.");
 assert.match(page, /Buka & beri keputusan/, "Pentadbir mesti mempunyai tindakan respons yang jelas.");
