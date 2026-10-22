@@ -16,5 +16,7 @@ assert.match(printRules, /\.official-case-lines>div\{[^}]*break-inside:avoid/, "
 assert.match(page, /async function printReport\(\)/, "Butang cetak mesti menggunakan proses persediaan gambar.");
 assert.match(page, /document\.querySelectorAll\("\.official-print-sheet \.secure-media\.is-image img"\)/, "Cetakan mesti menunggu semua gambar bukti.");
 assert.match(page, /printableImageData\(blob\)/, "Gambar bukti mesti ditukar kepada data cetakan yang stabil.");
+assert.match(page, /includeAudit&&<section className="official-audit"/, "Jejak audit cetakan mesti hanya disertakan apabila diminta.");
+assert.match(page, /Sertakan audit/, "Pengguna mesti mempunyai pilihan untuk memasukkan audit dalam cetakan.");
 
 console.log("Ujian cetakan lulus: gambar disediakan dahulu dan kandungan panjang bersambung tanpa memotong baris.");
