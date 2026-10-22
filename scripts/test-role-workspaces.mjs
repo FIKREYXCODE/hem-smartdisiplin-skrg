@@ -6,10 +6,12 @@ const brandingRoute = readFileSync(new URL("../app/api/branding/route.ts", impor
 
 assert.match(page, /view==="dashboard"&&<RoleWorkspaceHero/, "Panel buka ruang kerja mesti hanya muncul pada dashboard.");
 assert.match(page, /view==="admin"\?<AdminRecordToolbar/, "Pentadbir mesti menerima toolbar rekod ringkas.");
-assert.match(page, /view==="discipline"\|\|view==="admin"\)&&<ManagementStats/, "Kad status mesti tersedia untuk Guru Disiplin dan Pentadbir.");
-assert.match(page, /view==="discipline"&&<CaseCalendar records=\{active\}/, "Kalendar kes mesti tersedia dalam ruang kerja Guru Disiplin.");
+assert.match(page, /view==="admin"&&<>\{brandingPanel\}<ManagementStats/, "Kad status mesti kekal tersedia untuk Pentadbir.");
+assert.match(page, /view==="discipline"\?<CaseCalendar records=\{active\}/, "Kalendar kes mesti menjadi paparan utama Guru Disiplin.");
 assert.match(page, /function CaseCalendar\(/, "Komponen kalendar kes mesti wujud.");
-assert.match(page, /Klik tarikh berwarna untuk melihat semua kes pada hari tersebut/, "Kalendar mesti menerangkan interaksi tarikh kepada pengguna.");
+assert.match(page, /Petak berwarna menunjukkan status paling utama/, "Kalendar mesti menerangkan warna seluruh petak kepada pengguna.");
+assert.match(page, /className="calendar-case-table"/, "Kes pada tarikh dipilih mesti dipaparkan dalam jadual padat.");
+assert.match(page, /<th>Kesalahan<\/th><th>Pelapor<\/th>/, "Jadual kalendar mesti menunjukkan kesalahan dan pelapor dengan jelas.");
 assert.match(page, /function caseStatusText\(record:CaseRecord\)/, "Status setiap kes mesti menerangkan pihak yang sedang ditunggu.");
 assert.match(page, /Menunggu pengesahan Pentadbir Sekolah/, "Penerima pengesahan mesti dinyatakan dengan jelas.");
 assert.match(page, /Jejak audit disembunyikan/, "Dashboard System Admin tidak boleh memaparkan aktiviti audit secara automatik.");
@@ -22,7 +24,7 @@ assert.match(page, /Buka & ambil tindakan/, "Guru Disiplin mesti mempunyai tinda
 assert.match(page, /label="Carta Organisasi"/, "Carta Organisasi mesti muncul sebagai menu desktop untuk semua peranan.");
 assert.match(page, />Organisasi<\/button>/, "Carta Organisasi mesti boleh dibuka daripada navigasi telefon.");
 assert.match(page, /Modul HEM lengkap/, "Dashboard peranan mesti menyediakan jalan terus ke modul berasaskan video rujukan.");
-assert.match(page, /view==="admin"&&brandingPanel/, "Pentadbir Sekolah mesti menerima tetapan gambar header.");
+assert.match(page, /view==="admin"&&<>\{brandingPanel\}/, "Pentadbir Sekolah mesti menerima tetapan gambar header.");
 assert.match(brandingRoute, /actor\.activeRole !== "school_admin"/, "API header mesti membenarkan Pentadbir Sekolah dan System Admin sahaja.");
 assert.match(brandingRoute, /site_header_updated/, "Perubahan gambar header mesti direkod dalam audit.");
 
