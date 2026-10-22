@@ -13,6 +13,10 @@ assert.match(printRules, /\.official-audit\{break-inside:auto;page-break-inside:
 assert.match(printRules, /\.official-audit thead\{display:table-header-group\}/, "Kepala jadual audit mesti diulang pada halaman baharu.");
 assert.match(printRules, /\.official-audit tr\{break-inside:avoid;page-break-inside:avoid\}/, "Baris audit tidak boleh terpotong di antara halaman.");
 assert.match(printRules, /\.official-case-lines>div\{[^}]*break-inside:avoid/, "Setiap baris butiran kes tidak boleh terpotong.");
+assert.match(printRules, /\.official-print-sheet\{[^}]*width:100%!important[^}]*padding:6mm!important/, "Laporan A4 mesti menggunakan ruang halaman secara seimbang.");
+assert.match(printRules, /\.official-evidence>div\{[^}]*display:flex!important[^}]*justify-content:center/, "Lampiran gambar mesti berada di tengah ruang cetakan.");
+assert.match(printRules, /\.official-evidence \.secure-image\{[^}]*max-width:82mm/, "Saiz gambar cetakan mesti terkawal dan tidak menolak susun atur ke tepi.");
+assert.match(printRules, /\.official-signatures\{[^}]*break-inside:avoid[^}]*page-break-inside:avoid/, "Ruangan tandatangan tidak boleh terpotong antara halaman.");
 assert.match(page, /async function printReport\(\)/, "Butang cetak mesti menggunakan proses persediaan gambar.");
 assert.match(page, /document\.querySelectorAll\("\.official-print-sheet \.secure-media\.is-image img"\)/, "Cetakan mesti menunggu semua gambar bukti.");
 assert.match(page, /printableImageData\(blob\)/, "Gambar bukti mesti ditukar kepada data cetakan yang stabil.");
