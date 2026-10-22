@@ -7,6 +7,11 @@ const brandingRoute = readFileSync(new URL("../app/api/branding/route.ts", impor
 assert.match(page, /view==="dashboard"&&<RoleWorkspaceHero/, "Panel buka ruang kerja mesti hanya muncul pada dashboard.");
 assert.match(page, /view==="admin"\?<AdminRecordToolbar/, "Pentadbir mesti menerima toolbar rekod ringkas.");
 assert.match(page, /view==="discipline"\|\|view==="admin"\)&&<ManagementStats/, "Kad status mesti tersedia untuk Guru Disiplin dan Pentadbir.");
+assert.match(page, /view==="discipline"&&<CaseCalendar records=\{active\}/, "Kalendar kes mesti tersedia dalam ruang kerja Guru Disiplin.");
+assert.match(page, /function CaseCalendar\(/, "Komponen kalendar kes mesti wujud.");
+assert.match(page, /Klik tarikh berwarna untuk melihat semua kes pada hari tersebut/, "Kalendar mesti menerangkan interaksi tarikh kepada pengguna.");
+assert.match(page, /function caseStatusText\(record:CaseRecord\)/, "Status setiap kes mesti menerangkan pihak yang sedang ditunggu.");
+assert.match(page, /Menunggu pengesahan Pentadbir Sekolah/, "Penerima pengesahan mesti dinyatakan dengan jelas.");
 assert.match(page, /className="case-status-button" onClick=\{\(\)=>onOpen\(r\)\}/, "Status setiap kes mesti boleh membuka ruang respons.");
 assert.match(page, /Buka & beri keputusan/, "Pentadbir mesti mempunyai tindakan respons yang jelas.");
 assert.match(page, /Buka & ambil tindakan/, "Guru Disiplin mesti mempunyai tindakan respons yang jelas.");
